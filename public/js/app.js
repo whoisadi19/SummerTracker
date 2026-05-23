@@ -470,7 +470,7 @@ function renderHeatmap() {
     if (count > 2) lvl = 2;
     if (count > 4) lvl = 3;
     
-    html += `<div class="heatmap-cell l-${lvl}" title="${formatDate(d)}: ${count} tasks completed"></div>`;
+    html += `<div class="heatmap-cell l-${lvl}" title="${formatDate(d)}: ${count} tasks completed (Click to add notes)" onclick="openNotesModal('${dStr}')"></div>`;
   }
   grid.innerHTML = html;
 }
