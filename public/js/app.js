@@ -312,18 +312,32 @@ function renderDashboard() {
   const todayDateEl = document.getElementById('todayDate');
   todayDateEl.textContent = formatDate(new Date());
 
-  if (typeof SCHEDULE_DATA !== 'undefined' && info.isActive && info.weekIndex < SCHEDULE_DATA.length) {
-    const week = SCHEDULE_DATA[info.weekIndex];
-    const dayInWeek = info.dayIndex % 7;
+  let weekIndex = info.weekIndex;
+  let dayInWeek = ((info.dayIndex % 7) + 7) % 7;
+  let isPreview = false;
+
+  if (info.isFuture) {
+    weekIndex = 0;
+    dayInWeek = 0; // Show Week 1 Day 1 as preview
+    isPreview = true;
+  }
+
+  if (typeof SCHEDULE_DATA !== 'undefined' && (info.isActive || isPreview) && weekIndex < SCHEDULE_DATA.length && weekIndex >= 0) {
+    const week = SCHEDULE_DATA[weekIndex];
     if (week.days && week.days[dayInWeek]) {
       const day = week.days[dayInWeek];
       todayCards.innerHTML = `
+        ${isPreview ? `<div class="preview-badge" style="grid-column: 1 / -1; background: rgba(0, 229, 255, 0.1); border: 1px dashed var(--accent-dsa); color: var(--accent-dsa); padding: 8px 12px; border-radius: 8px; font-family: 'Outfit', sans-serif; font-size: 13px; text-align: center; margin-bottom: 8px;">⏳ Plan starts soon! Showing Day 1 Preview:</div>` : ''}
         <div class="today-card"><div class="today-dot dsa"></div><div><div class="today-card-label dsa">DSA</div><div class="today-card-text">${day.dsa}</div></div></div>
         <div class="today-card"><div class="today-dot ml"></div><div><div class="today-card-label ml">ML</div><div class="today-card-text">${day.ml}</div></div></div>
         <div class="today-card"><div class="today-dot os"></div><div><div class="today-card-label os">Open Source</div><div class="today-card-text">${day.os}</div></div></div>
       `;
-    } else todayCards.innerHTML = `<div class="today-empty">📋 No specific tasks for today</div>`;
-  } else todayCards.innerHTML = `<div class="today-empty">🚀 Keep up the momentum!</div>`;
+    } else {
+      todayCards.innerHTML = `<div class="today-empty">📋 No specific tasks for today</div>`;
+    }
+  } else {
+    todayCards.innerHTML = `<div class="today-empty">🚀 Keep up the momentum!</div>`;
+  }
 
   document.getElementById('statDsaDone').textContent = progress.dsa.done;
   document.getElementById('statMlDone').textContent = progress.ml.done;
@@ -463,6 +477,7 @@ function renderSchedule() {
 }
 
 function toggleScheduleWeek(id) { document.getElementById(id).classList.toggle('open'); }
+function toggleChecklistWeek(id) { document.getElementById(id).classList.toggle('open'); }
 
 // ── RENDER: CHECKLIST ──
 let currentChecklistTab = 'dsa';
