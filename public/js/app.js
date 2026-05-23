@@ -11,7 +11,10 @@ function loadState() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) return JSON.parse(raw);
   } catch (e) {}
-  return { completed: {}, theme: 'cyber', streak: 0, lastActiveDate: null, bestStreak: 0 };
+  return { 
+    completed: {}, theme: 'cyber', streak: 0, bestStreak: 0, 
+    lastActiveDate: null, xp: 0, heatmap: {}, notes: {}
+  };
 }
 
 function saveState() {
@@ -30,7 +33,25 @@ function toggleTheme() {
   document.documentElement.setAttribute('data-theme', next);
   appState.theme = next;
   saveState();
+  renderHeatmap(); // Re-render to update theme colors
 }
+
+// ── SHORTCUTS ──
+document.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  if (e.key === '1') navigate('dashboard');
+  if (e.key === '2') navigate('schedule');
+  if (e.key === '3') navigate('checklist');
+  if (e.key === '4') navigate('resources');
+  if (e.key === '5') navigate('pinger');
+  if (e.key.toLowerCase() === 'p') togglePomodoro();
+  if (e.key.toLowerCase() === 't') toggleTheme();
+  if (e.key.toLowerCase() === 's') { 
+    e.preventDefault(); 
+    navigate('checklist');
+    setTimeout(() => document.getElementById('clSearch').focus(), 100); 
+  }
+});
 
 // ── NAVIGATION ──
 let currentView = 'dashboard';
@@ -44,10 +65,11 @@ function navigate(view) {
     btn.classList.toggle('active', btn.dataset.view === view);
   });
 
-  // Re-render the view
   if (view === 'dashboard') renderDashboard();
   else if (view === 'schedule') renderSchedule();
   else if (view === 'checklist') renderChecklist();
+  else if (view === 'resources') renderResources();
+  else if (view === 'pinger') renderPinger();
 }
 
 // ── DATE HELPERS ──
@@ -82,7 +104,7 @@ function formatDate(date) {
   return date.toLocaleDateString('en-US', opts);
 }
 
-// ── PROGRESS CALCULATIONS ──
+// ── PROGRESS & XP ──
 function getProgress() {
   let dsaTotal = 0, dsaDone = 0;
   let mlTotal = 0, mlDone = 0;
@@ -132,11 +154,17 @@ function getWeekProgress(type, weekNum) {
   return { total, done };
 }
 
-// ── STREAK ──
-function updateStreak() {
+function updateStreakAndHeatmap() {
   const todayStr = new Date().toISOString().split('T')[0];
+  
+  if (!appState.heatmap) appState.heatmap = {};
+  appState.heatmap[todayStr] = (appState.heatmap[todayStr] || 0) + 1;
+  appState.xp = (appState.xp || 0) + 10;
 
-  if (appState.lastActiveDate === todayStr) return; // Already counted today
+  if (appState.lastActiveDate === todayStr) {
+    saveState();
+    return;
+  }
 
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
@@ -155,13 +183,110 @@ function updateStreak() {
   saveState();
 }
 
-// ── PROGRESS RING ANIMATION ──
 function setRingProgress(id, pct) {
   const circle = document.getElementById(id);
   if (!circle) return;
-  const circumference = 2 * Math.PI * 52; // r=52
+  const circumference = 2 * Math.PI * 52;
   const offset = circumference - (pct / 100) * circumference;
   circle.style.strokeDashoffset = offset;
+}
+
+// ── CONFETTI ──
+function shootConfetti() {
+  const canvas = document.getElementById('confettiCanvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  
+  const particles = [];
+  for(let i=0; i<150; i++) {
+    particles.push({
+      x: canvas.width/2, y: canvas.height/2 + 100,
+      r: Math.random()*6+3,
+      dx: Math.random()*16-8, dy: Math.random()*-15-5,
+      color: ['#00e5ff', '#ff3366', '#fbbf24', '#a855f7', '#4ade80'][Math.floor(Math.random()*5)],
+      rot: Math.random()*360
+    });
+  }
+  
+  function animate() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    let active = false;
+    particles.forEach(p => {
+      p.x += p.dx; p.y += p.dy;
+      p.dy += 0.4; // gravity
+      p.rot += 5;
+      if (p.y < canvas.height) active = true;
+      
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate((p.rot * Math.PI) / 180);
+      ctx.fillStyle = p.color;
+      ctx.fillRect(-p.r/2, -p.r/2, p.r, p.r);
+      ctx.restore();
+    });
+    if (active) requestAnimationFrame(animate);
+    else ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+  animate();
+}
+
+// ── POMODORO ──
+let pomoTimer = null;
+let pomoTimeLeft = 25 * 60;
+let pomoMode = 'work';
+
+function togglePomodoro() {
+  const icon = document.getElementById('pomoPlayIcon');
+  if (pomoTimer) {
+    clearInterval(pomoTimer);
+    pomoTimer = null;
+    icon.innerHTML = '<polygon points="5 3 19 12 5 21 5 3"></polygon>';
+  } else {
+    pomoTimer = setInterval(() => {
+      pomoTimeLeft--;
+      if (pomoTimeLeft <= 0) {
+        clearInterval(pomoTimer);
+        pomoTimer = null;
+        showToast('Session Complete! 🍅');
+        if (pomoMode === 'work') { shootConfetti(); appState.xp = (appState.xp||0)+20; saveState(); }
+        icon.innerHTML = '<polygon points="5 3 19 12 5 21 5 3"></polygon>';
+        renderDashboard(); // Update XP
+      }
+      updatePomodoroUI();
+    }, 1000);
+    icon.innerHTML = '<rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect>';
+  }
+}
+
+function resetPomodoro() {
+  if (pomoTimer) { clearInterval(pomoTimer); pomoTimer = null; }
+  document.getElementById('pomoPlayIcon').innerHTML = '<polygon points="5 3 19 12 5 21 5 3"></polygon>';
+  pomoTimeLeft = pomoMode === 'work' ? 25 * 60 : 5 * 60;
+  updatePomodoroUI();
+}
+
+function setPomodoroMode(m) {
+  pomoMode = m;
+  document.getElementById('pomoMode').textContent = m === 'work' ? 'Work' : 'Break';
+  document.querySelectorAll('.pomo-preset').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  resetPomodoro();
+}
+
+function updatePomodoroUI() {
+  const m = Math.floor(pomoTimeLeft / 60);
+  const s = pomoTimeLeft % 60;
+  const timeEl = document.getElementById('pomoTime');
+  if(timeEl) timeEl.textContent = `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+  
+  const total = pomoMode === 'work' ? 25 * 60 : 5 * 60;
+  const pct = ((total - pomoTimeLeft) / total) * 100;
+  const ring = document.getElementById('pomoRing');
+  if(ring) {
+    const circumference = 2 * Math.PI * 90;
+    ring.style.strokeDashoffset = circumference - (pct / 100) * circumference;
+  }
 }
 
 // ── RENDER: DASHBOARD ──
@@ -169,30 +294,20 @@ function renderDashboard() {
   const info = getTodayInfo();
   const progress = getProgress();
 
-  // Greeting
   document.getElementById('greetingTitle').textContent = `${getGreeting()}, Aditya`;
+  if (info.isFuture) document.getElementById('greetingSub').textContent = `Starts in ${Math.abs(info.dayIndex)} days · Get ready!`;
+  else if (info.isPast) document.getElementById('greetingSub').textContent = `Plan complete! 🎉`;
+  else document.getElementById('greetingSub').textContent = `Day ${info.dayIndex + 1} of ${TOTAL_DAYS} · Week ${info.weekIndex + 1}`;
 
-  if (info.isFuture) {
-    document.getElementById('greetingSub').textContent = `Starts in ${Math.abs(info.dayIndex)} days · Get ready!`;
-  } else if (info.isPast) {
-    document.getElementById('greetingSub').textContent = `Plan complete! 🎉`;
-  } else {
-    document.getElementById('greetingSub').textContent = `Day ${info.dayIndex + 1} of ${TOTAL_DAYS} · Week ${info.weekIndex + 1}`;
-  }
-
-  // Streak
   document.getElementById('streakCount').textContent = appState.streak || 0;
 
-  // Progress rings
   document.getElementById('ringPctDsa').textContent = progress.dsa.pct + '%';
   document.getElementById('ringPctMl').textContent = progress.ml.pct + '%';
   document.getElementById('ringPctOverall').textContent = progress.overall.pct + '%';
-
   setRingProgress('ringFillDsa', progress.dsa.pct);
   setRingProgress('ringFillMl', progress.ml.pct);
   setRingProgress('ringFillOverall', progress.overall.pct);
 
-  // Today's agenda
   const todayCards = document.getElementById('todayCards');
   const todayDateEl = document.getElementById('todayDate');
   todayDateEl.textContent = formatDate(new Date());
@@ -200,71 +315,102 @@ function renderDashboard() {
   if (typeof SCHEDULE_DATA !== 'undefined' && info.isActive && info.weekIndex < SCHEDULE_DATA.length) {
     const week = SCHEDULE_DATA[info.weekIndex];
     const dayInWeek = info.dayIndex % 7;
-
     if (week.days && week.days[dayInWeek]) {
       const day = week.days[dayInWeek];
       todayCards.innerHTML = `
-        <div class="today-card">
-          <div class="today-dot dsa"></div>
-          <div>
-            <div class="today-card-label dsa">DSA</div>
-            <div class="today-card-text">${day.dsa}</div>
-          </div>
-        </div>
-        <div class="today-card">
-          <div class="today-dot ml"></div>
-          <div>
-            <div class="today-card-label ml">ML</div>
-            <div class="today-card-text">${day.ml}</div>
-          </div>
-        </div>
-        <div class="today-card">
-          <div class="today-dot os"></div>
-          <div>
-            <div class="today-card-label os">Open Source</div>
-            <div class="today-card-text">${day.os}</div>
-          </div>
-        </div>
+        <div class="today-card"><div class="today-dot dsa"></div><div><div class="today-card-label dsa">DSA</div><div class="today-card-text">${day.dsa}</div></div></div>
+        <div class="today-card"><div class="today-dot ml"></div><div><div class="today-card-label ml">ML</div><div class="today-card-text">${day.ml}</div></div></div>
+        <div class="today-card"><div class="today-dot os"></div><div><div class="today-card-label os">Open Source</div><div class="today-card-text">${day.os}</div></div></div>
       `;
-    } else {
-      todayCards.innerHTML = `<div class="today-empty"><div class="today-empty-emoji">📋</div>No specific tasks for today</div>`;
-    }
-  } else if (info.isFuture) {
-    todayCards.innerHTML = `<div class="today-empty"><div class="today-empty-emoji">🚀</div>Your plan starts May 24. Get ready!</div>`;
-  } else {
-    todayCards.innerHTML = `<div class="today-empty"><div class="today-empty-emoji">🎉</div>Summer plan complete! Amazing work.</div>`;
-  }
+    } else todayCards.innerHTML = `<div class="today-empty">📋 No specific tasks for today</div>`;
+  } else todayCards.innerHTML = `<div class="today-empty">🚀 Keep up the momentum!</div>`;
 
-  // Quick stats
   document.getElementById('statDsaDone').textContent = progress.dsa.done;
   document.getElementById('statMlDone').textContent = progress.ml.done;
-  document.getElementById('statCurrentWeek').textContent = info.isActive ? info.weekIndex + 1 : (info.isPast ? '✓' : '—');
   document.getElementById('statDaysLeft').textContent = info.daysLeft;
+
+  // XP & Level
+  const xp = appState.xp || 0;
+  const level = Math.floor(xp / 100) + 1;
+  const currentXP = xp % 100;
+  document.getElementById('statLevel').textContent = level;
+  document.getElementById('xpText').textContent = `${currentXP} / 100 XP`;
+  document.getElementById('xpBar').style.width = currentXP + '%';
+
+  renderHeatmap();
+  updatePomodoroUI();
+}
+
+function renderHeatmap() {
+  const grid = document.getElementById('heatmapGrid');
+  if (!grid) return;
+  
+  const start = new Date(START_DATE);
+  let html = '';
+  for (let i = 0; i < 42; i++) {
+    const d = new Date(start);
+    d.setDate(d.getDate() + i);
+    const dStr = d.toISOString().split('T')[0];
+    
+    const count = (appState.heatmap || {})[dStr] || 0;
+    let lvl = 0;
+    if (count > 0) lvl = 1;
+    if (count > 2) lvl = 2;
+    if (count > 4) lvl = 3;
+    
+    html += `<div class="heatmap-cell l-${lvl}" title="${formatDate(d)}: ${count} tasks completed"></div>`;
+  }
+  grid.innerHTML = html;
+}
+
+// ── DAILY NOTES MODAL ──
+let notesTargetDate = null;
+
+function openNotesModal(dateStr = null) {
+  notesTargetDate = dateStr || new Date().toISOString().split('T')[0];
+  if (!appState.notes) appState.notes = {};
+  
+  document.getElementById('notesTextarea').value = appState.notes[notesTargetDate] || '';
+  document.getElementById('notesModalTitle').innerHTML = `📝 Notes for ${notesTargetDate}`;
+  document.getElementById('notesModal').classList.add('open');
+  document.getElementById('notesTextarea').focus();
+}
+
+function closeNotesModal(e, force=false) {
+  if (force || (e && e.target.id === 'notesModal')) {
+    document.getElementById('notesModal').classList.remove('open');
+  }
+}
+
+function saveNotes() {
+  const txt = document.getElementById('notesTextarea').value;
+  if (!appState.notes) appState.notes = {};
+  
+  if (txt.trim() === '') delete appState.notes[notesTargetDate];
+  else appState.notes[notesTargetDate] = txt;
+  
+  saveState();
+  closeNotesModal(null, true);
+  showToast('Notes saved!');
+  if(currentView === 'schedule') renderSchedule();
 }
 
 // ── RENDER: SCHEDULE ──
 function renderSchedule() {
   if (typeof SCHEDULE_DATA === 'undefined') return;
-
   const container = document.getElementById('scheduleWeeks');
   const info = getTodayInfo();
   let html = '';
 
-  // Group by phase
   const phases = [
     { num: 1, title: 'Build the <span class="c-dsa">Foundation</span>', sub: 'C++ basics, STL, Recursion · Andrew Ng Course 1 · First open source PR', weeks: [1, 2, 3] },
     { num: 2, title: 'Level <span class="c-ml">Up</span>', sub: 'Binary Search, Strings, Linked Lists · Andrew Ng Course 2 · Consistent PRs', weeks: [4, 5, 6] }
   ];
 
+  const startObj = new Date(START_DATE);
+
   phases.forEach((phase, pi) => {
-    html += `
-      <div class="phase-header">
-        <div class="phase-label">Phase ${phase.num} · Weeks ${phase.weeks[0]}–${phase.weeks[phase.weeks.length - 1]}</div>
-        <div class="phase-title">${phase.title}</div>
-        <div class="phase-sub">${phase.sub}</div>
-      </div>
-      <div class="schedule-weeks">
-    `;
+    html += `<div class="phase-header"><div class="phase-label">Phase ${phase.num} · Weeks ${phase.weeks[0]}–${phase.weeks[phase.weeks.length - 1]}</div><div class="phase-title">${phase.title}</div><div class="phase-sub">${phase.sub}</div></div><div class="schedule-weeks">`;
 
     phase.weeks.forEach(wNum => {
       const week = SCHEDULE_DATA.find(w => w.week === wNum);
@@ -276,33 +422,29 @@ function renderSchedule() {
       html += `
         <div class="wcard${isOpen ? ' open' : ''}${isCurrent ? ' current-week' : ''}" id="sched-w${wNum}">
           <div class="wcard-head" onclick="toggleScheduleWeek('sched-w${wNum}')">
-            <div class="wcard-left">
-              <div class="wnum">Week ${String(wNum).padStart(2, '0')}</div>
-              <div>
-                <div class="wtitle">${week.title}</div>
-                <div class="wdates">${week.dates}</div>
-              </div>
-            </div>
-            <div class="wcard-right">
-              <div class="wtags">
-                ${week.tags.map(t => `<span class="wtag ${t.type}">${t.label}</span>`).join('')}
-              </div>
-              <div class="chevron">▾</div>
-            </div>
+            <div class="wcard-left"><div class="wnum">Week ${String(wNum).padStart(2, '0')}</div><div><div class="wtitle">${week.title}</div><div class="wdates">${week.dates}</div></div></div>
+            <div class="wcard-right"><div class="wtags">${week.tags.map(t => `<span class="wtag ${t.type}">${t.label}</span>`).join('')}</div><div class="chevron">▾</div></div>
           </div>
           <div class="wcard-body">
-            <div class="wtargets">
-              ${week.targets.dsa ? `<div class="tcard dsa"><div class="tcard-label">DSA Target</div><ul>${week.targets.dsa.map(t => `<li>${t}</li>`).join('')}</ul></div>` : ''}
-              ${week.targets.ml ? `<div class="tcard ml"><div class="tcard-label">ML Target</div><ul>${week.targets.ml.map(t => `<li>${t}</li>`).join('')}</ul></div>` : ''}
-              ${week.targets.os ? `<div class="tcard os"><div class="tcard-label">Open Source</div><ul>${week.targets.os.map(t => `<li>${t}</li>`).join('')}</ul></div>` : ''}
-            </div>
             <div class="days-label">Daily Breakdown</div>
             <div class="day-rows">
               ${week.days.map((day, di) => {
                 const isToday = isCurrent && (info.dayIndex % 7 === di);
+                
+                // Calculate date string for notes
+                const dayDate = new Date(startObj);
+                dayDate.setDate(dayDate.getDate() + ((wNum-1)*7) + di);
+                const dStr = dayDate.toISOString().split('T')[0];
+                const hasNotes = appState.notes && appState.notes[dStr] ? 'has-notes' : '';
+
                 return `
                   <div class="day-row${isToday ? ' today-row' : ''}">
-                    <div class="day-name">${day.name}</div>
+                    <div class="day-name">
+                      ${day.name}
+                      <button class="day-notes-btn ${hasNotes}" onclick="openNotesModal('${dStr}')" title="Add/Edit Notes">
+                         ${hasNotes ? '📝 Notes' : '+ Note'}
+                      </button>
+                    </div>
                     <div class="day-cell dsa"><div class="day-cell-label">DSA</div><div class="day-cell-val">${day.dsa}</div></div>
                     <div class="day-cell ml"><div class="day-cell-label">ML</div><div class="day-cell-val">${day.ml}</div></div>
                     <div class="day-cell os"><div class="day-cell-label">Open Source</div><div class="day-cell-val">${day.os}</div></div>
@@ -314,94 +456,111 @@ function renderSchedule() {
         </div>
       `;
     });
-
     html += '</div>';
-
-    if (pi < phases.length - 1) {
-      html += '<hr class="phase-divider">';
-    }
+    if (pi < phases.length - 1) html += '<hr class="phase-divider">';
   });
-
   container.innerHTML = html;
 }
 
-function toggleScheduleWeek(id) {
-  document.getElementById(id).classList.toggle('open');
-}
+function toggleScheduleWeek(id) { document.getElementById(id).classList.toggle('open'); }
 
 // ── RENDER: CHECKLIST ──
 let currentChecklistTab = 'dsa';
+let clFilter = 'all';
+let clSearchQuery = '';
 
 function renderChecklist() {
   if (typeof CHECKLIST_DATA === 'undefined') return;
-
   const progress = getProgress();
-
-  // Update progress bars
   document.getElementById('clDsaNum').textContent = `${progress.dsa.done} / ${progress.dsa.total}`;
   document.getElementById('clMlNum').textContent = `${progress.ml.done} / ${progress.ml.total}`;
   document.getElementById('clDsaBar').style.width = progress.dsa.pct + '%';
   document.getElementById('clMlBar').style.width = progress.ml.pct + '%';
+  renderChecklistContent();
+}
 
+function filterChecklist() {
+  clSearchQuery = document.getElementById('clSearch').value.toLowerCase();
+  renderChecklistContent();
+}
+
+function setFilter(filter, el) {
+  clFilter = filter;
+  document.querySelectorAll('.cl-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
   renderChecklistContent();
 }
 
 function renderChecklistContent() {
   if (typeof CHECKLIST_DATA === 'undefined') return;
-
   const data = CHECKLIST_DATA[currentChecklistTab];
   const container = document.getElementById('clContent');
   const info = getTodayInfo();
   let html = '';
 
-  data.forEach((weekData, wi) => {
+  data.forEach((weekData) => {
     const wp = getWeekProgress(currentChecklistTab, weekData.week);
     const isCurrentWeek = info.isActive && info.weekIndex === weekData.week - 1;
-    const isOpen = isCurrentWeek || weekData.week === 1;
+    let isOpen = isCurrentWeek || weekData.week === 1;
+    if (clFilter !== 'all' || clSearchQuery !== '') isOpen = true; // Auto open if filtering
 
-    html += `
-      <div class="cl-week${isOpen ? ' open' : ''}" id="cl-${currentChecklistTab}-w${weekData.week}">
-        <div class="cl-week-header" onclick="toggleChecklistWeek('cl-${currentChecklistTab}-w${weekData.week}')">
-          <div class="cl-week-label">Week ${weekData.week}</div>
-          <div class="cl-week-dates">${weekData.dates}</div>
-          <div class="cl-week-prog ${currentChecklistTab}">${wp.done}/${wp.total}</div>
-          <div class="cl-week-chevron">▾</div>
-        </div>
-        <div class="cl-week-rule"></div>
-        <div class="cl-week-body">
-    `;
+    let weekHtml = '';
+    let itemsFoundInWeek = false;
 
     weekData.units.forEach(unit => {
-      html += `<div class="cl-unit-label">${unit.title}</div><div class="cl-item-list">`;
-
+      let unitHtml = '';
       unit.items.forEach(item => {
         const isDone = appState.completed[item.id];
-        const tags = (item.tags || []).map(t => {
+        const tags = item.tags || [];
+        const tagsLower = tags.map(t => t.toLowerCase());
+
+        // Apply Filters
+        if (clFilter === 'critical' && !tagsLower.some(t => t === 'critical' || t === 'hard')) return;
+        if (clFilter === 'hard' && !tagsLower.some(t => t === 'hard')) return;
+        if (clFilter === 'lc' && !tagsLower.some(t => t.startsWith('lc'))) return;
+        if (clFilter === 'incomplete' && isDone) return;
+        
+        if (clSearchQuery && !item.text.toLowerCase().includes(clSearchQuery) && !tagsLower.some(t => t.includes(clSearchQuery))) return;
+
+        itemsFoundInWeek = true;
+
+        const tagBadges = tags.map(t => {
           let cls = 'lc';
           const tl = t.toLowerCase();
           if (tl === 'critical') cls = 'critical';
           else if (tl === 'hard') cls = 'hard';
           else if (tl.startsWith('key')) cls = 'key';
-          else if (tl.startsWith('lc')) cls = 'lc';
           return `<span class="cl-item-tag ${cls}">${t}</span>`;
         }).join('');
 
-        html += `
-          <div class="cl-item${isDone ? ' done' : ''}" onclick="toggleItem('${item.id}', this)">
+        unitHtml += `
+          <div class="cl-item${isDone ? ' done' : ''}" onclick="toggleItem('${item.id}', this, ${weekData.week})">
             <div class="cl-checkbox ${currentChecklistTab}"><span class="cl-checkmark">✓</span></div>
             <div class="cl-item-text">${item.text}</div>
-            ${tags}
+            ${tagBadges}
           </div>
         `;
       });
-
-      html += '</div>';
+      if (unitHtml) weekHtml += `<div class="cl-unit-label">${unit.title}</div><div class="cl-item-list">${unitHtml}</div>`;
     });
 
-    html += '</div></div>';
+    if (itemsFoundInWeek) {
+      html += `
+        <div class="cl-week${isOpen ? ' open' : ''}" id="cl-${currentChecklistTab}-w${weekData.week}">
+          <div class="cl-week-header" onclick="toggleChecklistWeek('cl-${currentChecklistTab}-w${weekData.week}')">
+            <div class="cl-week-label">Week ${weekData.week}</div>
+            <div class="cl-week-dates">${weekData.dates}</div>
+            <div class="cl-week-prog ${currentChecklistTab}">${wp.done}/${wp.total}</div>
+            <div class="cl-week-chevron">▾</div>
+          </div>
+          <div class="cl-week-rule"></div>
+          <div class="cl-week-body">${weekHtml}</div>
+        </div>
+      `;
+    }
   });
 
-  container.innerHTML = html;
+  container.innerHTML = html || `<div style="padding:40px; text-align:center; color:var(--text-muted);">No items match your search.</div>`;
 }
 
 function switchChecklistTab(tab) {
@@ -410,28 +569,23 @@ function switchChecklistTab(tab) {
   renderChecklistContent();
 }
 
-function toggleChecklistWeek(id) {
-  document.getElementById(id).classList.toggle('open');
-}
-
-function toggleItem(id, el) {
+function toggleItem(id, el, weekNum) {
   const isDone = !appState.completed[id];
   appState.completed[id] = isDone || undefined;
   if (!isDone) delete appState.completed[id];
 
-  // Update streak on completion
-  if (isDone) updateStreak();
+  if (isDone) updateStreakAndHeatmap();
 
   saveState();
-
-  // Toggle visual state
   el.classList.toggle('done', isDone);
-
-  // Update progress numbers
   updateChecklistProgress();
 
-  // Update dashboard if visible
-  if (currentView === 'dashboard') renderDashboard();
+  // Check week completion for confetti
+  const wp = getWeekProgress(currentChecklistTab, weekNum);
+  if (isDone && wp.done === wp.total) {
+    shootConfetti();
+    showToast(`Week ${weekNum} Complete! Incredible! 🎉`);
+  }
 }
 
 function updateChecklistProgress() {
@@ -441,7 +595,6 @@ function updateChecklistProgress() {
   document.getElementById('clDsaBar').style.width = progress.dsa.pct + '%';
   document.getElementById('clMlBar').style.width = progress.ml.pct + '%';
 
-  // Update week progress counters
   if (typeof CHECKLIST_DATA !== 'undefined') {
     CHECKLIST_DATA[currentChecklistTab].forEach(weekData => {
       const wp = getWeekProgress(currentChecklistTab, weekData.week);
@@ -451,18 +604,164 @@ function updateChecklistProgress() {
   }
 }
 
-// ── RESET ──
+// ── RESOURCES VIEW ──
+let resTab = 'dsa-roadmap';
+function switchResourceTab(tab) {
+  resTab = tab;
+  document.querySelectorAll('#view-resources .cl-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+  renderResources();
+}
+
+function renderResources() {
+  const c = document.getElementById('resContent');
+  if (resTab === 'dsa-roadmap') {
+    c.innerHTML = `
+      <div class="res-card">
+        <div class="res-card-title">C++ DSA Core Roadmap</div>
+        <div style="font-family:'Outfit',sans-serif; color:var(--text-muted); margin-bottom:16px;">
+          Your step-by-step path to algorithmic mastery. Click a step to copy its focus prompt.
+        </div>
+        <div class="res-step">
+           <div class="res-step-label">UNIT 1 · Syntax & Logic</div>
+           <div style="font-family:'Syne',sans-serif; font-size:16px; color:var(--text-primary);">C++ Basics, Data Types, Control Flow</div>
+           <div class="res-step-prompt">"Explain C++ memory management and references for a beginner with code examples."</div>
+           <button class="res-copy-btn" onclick="copyText('Explain C++ memory management and references for a beginner with code examples.')">📋 Copy Prompt</button>
+        </div>
+        <div class="res-step">
+           <div class="res-step-label">UNIT 2 · STL & Efficiency</div>
+           <div style="font-family:'Syne',sans-serif; font-size:16px; color:var(--text-primary);">C++ Standard Template Library (Vectors, Maps)</div>
+           <div class="res-step-prompt">"What are the time complexities of standard STL containers like std::map, std::unordered_map, and std::vector?"</div>
+           <button class="res-copy-btn" onclick="copyText('What are the time complexities of standard STL containers like std::map, std::unordered_map, and std::vector?')">📋 Copy Prompt</button>
+        </div>
+        <div class="res-step">
+           <div class="res-step-label">UNIT 3 · Algorithmic Paradigms</div>
+           <div style="font-family:'Syne',sans-serif; font-size:16px; color:var(--text-primary);">Recursion & Backtracking Foundation</div>
+           <div class="res-step-prompt">"Teach me how to convert an iterative solution to a recursive one in C++, using a tree analogy."</div>
+           <button class="res-copy-btn" onclick="copyText('Teach me how to convert an iterative solution to a recursive one in C++, using a tree analogy.')">📋 Copy Prompt</button>
+        </div>
+      </div>
+    `;
+  } else {
+    c.innerHTML = `
+      <div class="res-card">
+        <div class="res-card-title">Open Source PR Playbook</div>
+        <div style="font-family:'Outfit',sans-serif; color:var(--text-muted); margin-bottom:16px;">
+          5-Step Guide to Landing Your First Merged PR
+        </div>
+        <div class="res-step">
+           <div class="res-step-label">STEP 1 · Discovery</div>
+           <div style="font-family:'Syne',sans-serif; font-size:16px; color:var(--text-primary);">Find good first issues on GitHub</div>
+           <div class="res-step-prompt">"Find me active open source C++ or Python repositories with 'good first issue' tags."</div>
+           <button class="res-copy-btn" onclick="copyText('Find me active open source C++ or Python repositories with good first issue tags.')">📋 Copy Prompt</button>
+        </div>
+        <div class="res-step">
+           <div class="res-step-label">STEP 2 · Environment</div>
+           <div style="font-family:'Syne',sans-serif; font-size:16px; color:var(--text-primary);">Fork, Clone, and Build</div>
+           <div class="res-step-prompt">"git clone [URL]\ncd [repo]\nmkdir build && cd build\ncmake .. && make"</div>
+           <button class="res-copy-btn" onclick="copyText('git clone [URL]\\ncd [repo]\\nmkdir build && cd build\\ncmake .. && make')">📋 Copy Prompt</button>
+        </div>
+        <div class="res-step">
+           <div class="res-step-label">STEP 3 · Implementation</div>
+           <div style="font-family:'Syne',sans-serif; font-size:16px; color:var(--text-primary);">Write clean, conforming code</div>
+           <div class="res-step-prompt">"Review my C++ code snippet against standard LLVM style guidelines before I submit."</div>
+           <button class="res-copy-btn" onclick="copyText('Review my C++ code snippet against standard LLVM style guidelines before I submit.')">📋 Copy Prompt</button>
+        </div>
+      </div>
+    `;
+  }
+}
+
+function copyText(txt) {
+  navigator.clipboard.writeText(txt);
+  showToast('Copied to clipboard!');
+}
+
+// ── PINGER VIEW ──
+let pingHistory = [];
+let pingTimer = null;
+
+function renderPinger() {
+  const c = document.getElementById('pingerContent');
+  if(!c.innerHTML.includes('pinger-status-card')) {
+    c.innerHTML = `
+      <div class="pinger-status-card">
+        <div class="status-indicator"></div>
+        <div>
+          <h3 style="margin:0; font-family:'Syne',sans-serif">SummerStudyHub Backend</h3>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--text-muted)">Tracking: /api/health</div>
+        </div>
+        <div style="margin-left:auto; font-family:'JetBrains Mono',monospace; color:var(--accent-dsa); font-size:18px;" id="pingLatency">Checking...</div>
+      </div>
+      <div class="res-card">
+         <div class="res-card-title">Latency Log</div>
+         <div id="pingLog" style="font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--text-muted); max-height:200px; overflow-y:auto; margin-bottom:16px;"></div>
+         <svg class="latency-chart" viewBox="0 0 400 60" preserveAspectRatio="none">
+            <polyline id="latencyPolyline" class="latency-line" points=""></polyline>
+         </svg>
+      </div>
+    `;
+  }
+  
+  if (!pingTimer) checkPing();
+}
+
+async function checkPing() {
+  if (currentView !== 'pinger') {
+    clearTimeout(pingTimer);
+    pingTimer = null;
+    return;
+  }
+  const start = Date.now();
+  try {
+    // Ping our own express server health route
+    const res = await fetch('/api/health'); 
+    const latency = Date.now() - start;
+    document.getElementById('pingLatency').textContent = latency + 'ms';
+    document.querySelector('.status-indicator').style.background = 'var(--accent-os)';
+    logPing(latency);
+  } catch (e) {
+    document.getElementById('pingLatency').textContent = 'ERROR';
+    document.querySelector('.status-indicator').style.background = '#ff3366';
+  }
+  pingTimer = setTimeout(checkPing, 5000);
+}
+
+function logPing(ms) {
+  const log = document.getElementById('pingLog');
+  if(!log) return;
+  const t = new Date().toLocaleTimeString();
+  log.innerHTML = `<div>[${t}] GET /api/health - ${ms}ms</div>` + log.innerHTML;
+  
+  pingHistory.push(ms);
+  if(pingHistory.length > 30) pingHistory.shift();
+  
+  const poly = document.getElementById('latencyPolyline');
+  if(poly) {
+    const max = Math.max(...pingHistory, 50);
+    const pts = pingHistory.map((v, i) => {
+      const x = (i / 29) * 400;
+      const y = 60 - ((v / max) * 50);
+      return `${x},${y}`;
+    }).join(' ');
+    poly.setAttribute('points', pts);
+  }
+}
+
+// ── UTILITIES ──
 function resetAllProgress() {
   if (!confirm('Reset all progress? This cannot be undone.')) return;
   appState.completed = {};
   appState.streak = 0;
   appState.lastActiveDate = null;
+  appState.xp = 0;
+  appState.heatmap = {};
+  appState.notes = {};
   saveState();
+  renderDashboard();
   renderChecklist();
   showToast('Progress reset');
 }
 
-// ── EXPORT / IMPORT ──
 function exportProgress() {
   const blob = new Blob([JSON.stringify(appState, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
@@ -474,7 +773,6 @@ function exportProgress() {
   showToast('Progress exported! 💾');
 }
 
-// ── TOAST ──
 function showToast(message) {
   const container = document.getElementById('toastContainer');
   const toast = document.createElement('div');
@@ -489,13 +787,11 @@ function init() {
   initTheme();
   renderDashboard();
 
-  // Check if data is loaded
   if (typeof CHECKLIST_DATA === 'undefined' || typeof SCHEDULE_DATA === 'undefined') {
     console.warn('Data not loaded yet. Some features may not work.');
   }
 }
 
-// Wait for DOM
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', init);
 } else {
