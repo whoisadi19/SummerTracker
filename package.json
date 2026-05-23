@@ -1,0 +1,17 @@
+{
+  "name": "summer-study-hub",
+  "version": "1.0.0",
+  "description": "Aditya's Summer Study Hub — DSA, ML & Open Source Tracker",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "compression": "^1.7.4"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

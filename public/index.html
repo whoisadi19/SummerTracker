@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="cyber">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Summer Study Hub — Aditya | DSA · ML · Open Source</title>
+  <meta name="description" content="Aditya's Summer 2026 Study Hub — Track DSA, Machine Learning, and Open Source progress. May 24 – July 5, 2026.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- ═══════════════════════════════════ -->
+  <!-- SIDEBAR NAVIGATION                 -->
+  <!-- ═══════════════════════════════════ -->
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">⚡</div>
+      <span class="brand-text">StudyHub</span>
+    </div>
+
+    <div class="sidebar-nav">
+      <button class="nav-item active" data-view="dashboard" onclick="navigate('dashboard')">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        <span>Dashboard</span>
+      </button>
+      <button class="nav-item" data-view="schedule" onclick="navigate('schedule')">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <span>Schedule</span>
+      </button>
+      <button class="nav-item" data-view="checklist" onclick="navigate('checklist')">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+        <span>Checklist</span>
+      </button>
+    </div>
+
+    <div class="sidebar-bottom">
+      <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle theme">
+        <svg class="theme-icon sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+        <svg class="theme-icon moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+      </button>
+      <button class="export-btn" onclick="exportProgress()" title="Export progress">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Mobile bottom nav -->
+  <nav class="mobile-nav" id="mobileNav">
+    <button class="mob-nav-item active" data-view="dashboard" onclick="navigate('dashboard')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      <span>Home</span>
+    </button>
+    <button class="mob-nav-item" data-view="schedule" onclick="navigate('schedule')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <span>Schedule</span>
+    </button>
+    <button class="mob-nav-item" data-view="checklist" onclick="navigate('checklist')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+      <span>Checklist</span>
+    </button>
+  </nav>
+
+  <!-- ═══════════════════════════════════ -->
+  <!-- MAIN CONTENT                        -->
+  <!-- ═══════════════════════════════════ -->
+  <main class="main-content" id="mainContent">
+
+    <!-- ─── DASHBOARD VIEW ─── -->
+    <section class="view active" id="view-dashboard">
+      <div class="view-container">
+
+        <!-- Greeting -->
+        <div class="greeting-banner" id="greetingBanner">
+          <div class="greeting-text">
+            <div class="greeting-eyebrow" id="greetingEyebrow">SUMMER 2026 · STUDY PLAN</div>
+            <h1 class="greeting-title" id="greetingTitle">Good afternoon, Aditya</h1>
+            <div class="greeting-sub" id="greetingSub">Day 1 of 42 · Week 1</div>
+          </div>
+          <div class="greeting-streak" id="greetingStreak">
+            <div class="streak-flame">🔥</div>
+            <div class="streak-count" id="streakCount">0</div>
+            <div class="streak-label">day streak</div>
+          </div>
+        </div>
+
+        <!-- Progress Rings -->
+        <div class="progress-rings">
+          <div class="ring-card" id="ringDsa">
+            <svg class="ring-svg" viewBox="0 0 120 120">
+              <circle class="ring-bg" cx="60" cy="60" r="52" />
+              <circle class="ring-fill dsa" cx="60" cy="60" r="52" id="ringFillDsa" />
+            </svg>
+            <div class="ring-label">
+              <div class="ring-pct" id="ringPctDsa">0%</div>
+              <div class="ring-name">DSA</div>
+            </div>
+          </div>
+          <div class="ring-card" id="ringMl">
+            <svg class="ring-svg" viewBox="0 0 120 120">
+              <circle class="ring-bg" cx="60" cy="60" r="52" />
+              <circle class="ring-fill ml" cx="60" cy="60" r="52" id="ringFillMl" />
+            </svg>
+            <div class="ring-label">
+              <div class="ring-pct" id="ringPctMl">0%</div>
+              <div class="ring-name">ML</div>
+            </div>
+          </div>
+          <div class="ring-card" id="ringOverall">
+            <svg class="ring-svg" viewBox="0 0 120 120">
+              <circle class="ring-bg" cx="60" cy="60" r="52" />
+              <circle class="ring-fill overall" cx="60" cy="60" r="52" id="ringFillOverall" />
+            </svg>
+            <div class="ring-label">
+              <div class="ring-pct" id="ringPctOverall">0%</div>
+              <div class="ring-name">Overall</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Today's Agenda -->
+        <div class="today-panel">
+          <div class="panel-header">
+            <h2 class="panel-title">Today's Agenda</h2>
+            <span class="panel-date" id="todayDate"></span>
+          </div>
+          <div class="today-cards" id="todayCards">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="quick-stats">
+          <div class="stat-card">
+            <div class="stat-value" id="statDsaDone">0</div>
+            <div class="stat-label">DSA Done</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="statMlDone">0</div>
+            <div class="stat-label">ML Done</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="statCurrentWeek">1</div>
+            <div class="stat-label">Current Week</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="statDaysLeft">42</div>
+            <div class="stat-label">Days Left</div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ─── SCHEDULE VIEW ─── -->
+    <section class="view" id="view-schedule">
+      <div class="view-container">
+        <div class="view-header">
+          <div>
+            <div class="view-eyebrow">SUMMER 2026</div>
+            <h1 class="view-title">
+              <span class="c-dsa">DSA.</span><br>
+              <span class="c-ml">ML.</span><br>
+              <span class="c-os">Open Source.</span>
+            </h1>
+          </div>
+          <div class="schedule-meta">
+            <span>📅 May 24 – July 5, 2026</span>
+            <span>⏱ 6–7 hrs/day</span>
+            <span>🌙 Afternoon / Evening</span>
+          </div>
+        </div>
+
+        <!-- Legend -->
+        <div class="legend">
+          <div class="legend-item"><div class="ldot dsa"></div>DSA · C++</div>
+          <div class="legend-item"><div class="ldot ml"></div>Andrew Ng ML</div>
+          <div class="legend-item"><div class="ldot os"></div>Open Source</div>
+          <div class="legend-item"><div class="ldot rev"></div>Review</div>
+        </div>
+
+        <!-- Daily Time Structure -->
+        <div class="daily-panel">
+          <div class="section-label">Daily Time Structure</div>
+          <div class="timeline-bar">
+            <div class="tseg wake">Wake</div>
+            <div class="tseg dsa">DSA</div>
+            <div class="tseg ml">ML</div>
+            <div class="tseg brk">Break</div>
+            <div class="tseg os">OS</div>
+            <div class="tseg rev">Review</div>
+          </div>
+          <div class="time-ruler">
+            <span>12pm</span><span>1pm</span><span>2:30</span><span>4:30</span><span>5:30</span><span>6pm</span><span>7:30</span><span>8:30</span>
+          </div>
+          <div class="blocks-detail">
+            <div class="bcard dsa">
+              <div class="bcard-time">1:00 – 3:30 PM</div>
+              <div class="bcard-name">DSA · C++</div>
+              <div class="bcard-desc">2.5 hrs. Watch Striver → code from memory → submit on LeetCode.</div>
+            </div>
+            <div class="bcard ml">
+              <div class="bcard-time">3:30 – 5:30 PM</div>
+              <div class="bcard-name">Andrew Ng ML</div>
+              <div class="bcard-desc">2 hrs. Videos + assignments. Never skip the assignments.</div>
+            </div>
+            <div class="bcard os">
+              <div class="bcard-time">6:00 – 7:30 PM</div>
+              <div class="bcard-name">Open Source</div>
+              <div class="bcard-desc">1.5 hrs. 3–4x per week. Find issue → implement → PR.</div>
+            </div>
+            <div class="bcard rev">
+              <div class="bcard-time">7:30 – 8:30 PM</div>
+              <div class="bcard-name">Review Block</div>
+              <div class="bcard-desc">1 hr daily. Redo yesterday's problems blind.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Schedule Weeks (populated by JS) -->
+        <div id="scheduleWeeks"></div>
+      </div>
+    </section>
+
+    <!-- ─── CHECKLIST VIEW ─── -->
+    <section class="view" id="view-checklist">
+      <div class="view-container">
+        <div class="view-header checklist-header">
+          <div>
+            <div class="view-eyebrow">COMPLETION TRACKER</div>
+            <h1 class="view-title checklist-title">
+              <span class="c-dsa">DSA</span> &amp;
+              <span class="c-ml">ML</span> Tracker
+            </h1>
+          </div>
+          <div class="checklist-meta">
+            Striver A2Z · Andrew Ng Specialization<br>
+            6 Weeks · Every Day
+          </div>
+        </div>
+
+        <!-- Progress Cards -->
+        <div class="checklist-progress">
+          <div class="cprog-card dsa">
+            <div class="cprog-label">DSA Progress</div>
+            <div class="cprog-numbers" id="clDsaNum">0 / 0</div>
+            <div class="cprog-bar"><div class="cprog-fill" id="clDsaBar"></div></div>
+          </div>
+          <div class="cprog-card ml">
+            <div class="cprog-label">ML Progress</div>
+            <div class="cprog-numbers" id="clMlNum">0 / 0</div>
+            <div class="cprog-bar"><div class="cprog-fill" id="clMlBar"></div></div>
+          </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="cl-tabs">
+          <button class="cl-tab active" data-tab="dsa" onclick="switchChecklistTab('dsa')">DSA · C++</button>
+          <button class="cl-tab" data-tab="ml" onclick="switchChecklistTab('ml')">Andrew Ng ML</button>
+        </div>
+
+        <!-- Checklist Content (populated by JS) -->
+        <div class="cl-content" id="clContent"></div>
+
+        <!-- Reset -->
+        <div class="reset-bar">
+          <button class="reset-btn" onclick="resetAllProgress()">↺ Reset All</button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Toast container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
