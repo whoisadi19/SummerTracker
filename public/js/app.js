@@ -7,18 +7,102 @@ const STORAGE_KEY = 'summerStudyHub_v1';
 let appState = loadState();
 
 function loadState() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
-  } catch (e) {}
-  return { 
+  let state = { 
     completed: {}, theme: 'cyber', streak: 0, bestStreak: 0, 
     lastActiveDate: null, xp: 0, heatmap: {}, notes: {}
   };
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) state = JSON.parse(raw);
+  } catch (e) {}
+  
+  // Load Auth Session
+  const token = localStorage.getItem('ssh_auth_token');
+  const username = localStorage.getItem('ssh_auth_username');
+  if (token && username) {
+    state.user = { token, username };
+  } else {
+    state.user = null;
+  }
+  return state;
 }
 
 function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+  syncCloudProgress(); // Perform background cloud sync if logged in
+}
+
+let isSyncing = false;
+async function syncCloudProgress() {
+  if (!appState.user || isSyncing) return;
+  isSyncing = true;
+  try {
+    const res = await fetch('/api/progress', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${appState.user.token}`
+      },
+      body: JSON.stringify({
+        completed: appState.completed,
+        streak: appState.streak,
+        bestStreak: appState.bestStreak,
+        lastActiveDate: appState.lastActiveDate,
+        xp: appState.xp,
+        heatmap: appState.heatmap,
+        notes: appState.notes,
+        theme: appState.theme
+      })
+    });
+    if (res.status === 403) {
+      logout(true); // Forced logout for expired session
+      showToast('Session expired. Please log in again.');
+    }
+  } catch (e) {
+    console.warn('Cloud database offline or unreachable. Saving locally.');
+  } finally {
+    isSyncing = false;
+  }
+}
+
+async function fetchCloudProgress() {
+  if (!appState.user) return;
+  try {
+    const res = await fetch('/api/progress', {
+      headers: {
+        'Authorization': `Bearer ${appState.user.token}`
+      }
+    });
+    if (res.ok) {
+      const cloudData = await res.json();
+      
+      // Safe merge: take checked items from either local or cloud
+      const mergedCompleted = { ...appState.completed, ...(cloudData.completed || {}) };
+      
+      appState.completed = mergedCompleted;
+      appState.streak = Math.max(appState.streak || 0, cloudData.streak || 0);
+      appState.bestStreak = Math.max(appState.bestStreak || 0, cloudData.bestStreak || 0);
+      appState.xp = Math.max(appState.xp || 0, cloudData.xp || 0);
+      
+      appState.heatmap = { ...(appState.heatmap || {}), ...(cloudData.heatmap || {}) };
+      appState.notes = { ...(appState.notes || {}), ...(cloudData.notes || {}) };
+      
+      if (cloudData.theme) appState.theme = cloudData.theme;
+
+      // Save locally and refresh frontend
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+      initTheme();
+      renderDashboard();
+      if (currentView === 'checklist') renderChecklist();
+      else if (currentView === 'schedule') renderSchedule();
+      
+      renderUserWidget();
+    } else if (res.status === 403) {
+      logout(true);
+    }
+  } catch (e) {
+    console.warn('Could not fetch cloud data. Running offline in guest mode.');
+  }
 }
 
 // ── THEME ──
@@ -797,10 +881,112 @@ function showToast(message) {
   setTimeout(() => toast.remove(), 3000);
 }
 
+// ── AUTH & CLOUD USER INTERFACE ──
+let authActiveTab = 'login';
+
+function renderUserWidget() {
+  const container = document.getElementById('userWidget');
+  if (!container) return;
+
+  if (appState.user) {
+    container.innerHTML = `
+      <div class="user-btn logged-in" title="Sync Status: Cloud Sync Active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="user-icon" style="color:var(--accent-os)"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span class="user-name">${appState.user.username}</span>
+        <button class="user-logout-btn" onclick="logout()" title="Logout">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        </button>
+      </div>
+    `;
+  } else {
+    container.innerHTML = `
+      <button class="user-btn" onclick="openAuthModal()" title="Login or Register to backup progress">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="user-icon" style="color:var(--accent-dsa)"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span class="user-name">Sign In</span>
+      </button>
+    `;
+  }
+}
+
+function openAuthModal() {
+  document.getElementById('authErrorMsg').textContent = '';
+  document.getElementById('authUsername').value = '';
+  document.getElementById('authPassword').value = '';
+  switchAuthTab('login');
+  document.getElementById('authModal').classList.add('open');
+  document.getElementById('authUsername').focus();
+}
+
+function closeAuthModal(e, force = false) {
+  if (force || (e && e.target.id === 'authModal')) {
+    document.getElementById('authModal').classList.remove('open');
+  }
+}
+
+function switchAuthTab(tab) {
+  authActiveTab = tab;
+  document.getElementById('authTabLogin').classList.toggle('active', tab === 'login');
+  document.getElementById('authTabRegister').classList.toggle('active', tab === 'register');
+  document.getElementById('authSubmitBtn').textContent = tab === 'login' ? 'Sign In' : 'Create Account';
+  document.getElementById('authErrorMsg').textContent = '';
+}
+
+async function handleAuthSubmit(e) {
+  e.preventDefault();
+  const username = document.getElementById('authUsername').value;
+  const password = document.getElementById('authPassword').value;
+  const errorEl = document.getElementById('authErrorMsg');
+  errorEl.textContent = '';
+
+  const url = authActiveTab === 'login' ? '/api/auth/login' : '/api/auth/register';
+
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    
+    const data = await res.json();
+    if (res.ok) {
+      localStorage.setItem('ssh_auth_token', data.token);
+      localStorage.setItem('ssh_auth_username', data.username);
+      appState.user = { token: data.token, username: data.username };
+      
+      closeAuthModal(null, true);
+      showToast(authActiveTab === 'login' ? 'Logged in successfully!' : 'Account created successfully!');
+      
+      // Perform guest migration and fetch cloud progress
+      await syncCloudProgress();
+      await fetchCloudProgress();
+      renderUserWidget();
+    } else {
+      errorEl.textContent = data.error || 'Authentication failed.';
+    }
+  } catch (err) {
+    errorEl.textContent = 'Could not connect to auth service. DB may be offline.';
+  }
+}
+
+function logout(forced = false) {
+  if (forced || confirm('Are you sure you want to sign out? Your progress will remain saved on this device.')) {
+    localStorage.removeItem('ssh_auth_token');
+    localStorage.removeItem('ssh_auth_username');
+    appState.user = null;
+    renderUserWidget();
+    showToast('Signed out.');
+  }
+}
+
 // ── BOOT ──
 function init() {
   initTheme();
   renderDashboard();
+  renderUserWidget();
+  
+  if (appState.user) {
+    fetchCloudProgress();
+  }
 
   if (typeof CHECKLIST_DATA === 'undefined' || typeof SCHEDULE_DATA === 'undefined') {
     console.warn('Data not loaded yet. Some features may not work.');

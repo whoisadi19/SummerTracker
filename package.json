@@ -8,8 +8,12 @@
     "dev": "node server.js"
   },
   "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "compression": "^1.7.4",
+    "dotenv": "^17.4.2",
     "express": "^4.21.0",
-    "compression": "^1.7.4"
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.6.2"
   },
   "engines": {
     "node": ">=18.0.0"
