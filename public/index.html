@@ -104,7 +104,7 @@
             <div class="greeting-sub" id="greetingSub">Day 1 of 42 · Week 1</div>
           </div>
           <div class="greeting-streak" id="greetingStreak">
-            <div class="streak-flame">🔥</div>
+            <div class="streak-flame" id="streakFlame">🔥</div>
             <div class="streak-count" id="streakCount">0</div>
             <div class="streak-label">day streak</div>
           </div>
@@ -455,6 +455,23 @@
           <div class="auth-error-msg" id="authErrorMsg"></div>
           <button type="submit" class="modal-btn primary auth-submit-btn" id="authSubmitBtn">Sign In</button>
         </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reset Modal -->
+  <div class="modal-overlay" id="resetModal" onclick="closeResetModal(event)">
+    <div class="modal auth-modal">
+      <div class="modal-header">
+        <h2 class="modal-title" style="color: var(--accent-dsa)">⚠️ Reset Progress?</h2>
+        <button class="modal-close" onclick="closeResetModal(null, true)">✕</button>
+      </div>
+      <div class="modal-body" style="padding: 20px;">
+        <p style="color: var(--text-secondary); margin-bottom: 20px; line-height: 1.5;">Are you sure you want to reset all your progress? This action cannot be undone and will wipe your local data.</p>
+        <div style="display: flex; gap: 10px; justify-content: flex-end;">
+          <button class="modal-btn secondary" onclick="closeResetModal(null, true)">Cancel</button>
+          <button class="modal-btn primary" style="background: var(--accent-dsa);" onclick="confirmResetAll()">Reset All</button>
+        </div>
       </div>
     </div>
   </div>

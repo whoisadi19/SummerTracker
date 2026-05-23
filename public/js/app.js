@@ -383,7 +383,14 @@ function renderDashboard() {
   else if (info.isPast) document.getElementById('greetingSub').textContent = `Plan complete! 🎉`;
   else document.getElementById('greetingSub').textContent = `Day ${info.dayIndex + 1} of ${TOTAL_DAYS} · Week ${info.weekIndex + 1}`;
 
-  document.getElementById('streakCount').textContent = appState.streak || 0;
+  const streak = appState.streak || 0;
+  document.getElementById('streakCount').textContent = streak;
+  const flameEl = document.getElementById('streakFlame');
+  if (flameEl) {
+    if (streak >= 14) { flameEl.textContent = '⚡'; flameEl.style.textShadow = '0 0 10px #FFD700'; }
+    else if (streak >= 7) { flameEl.textContent = '🔥'; flameEl.style.textShadow = '0 0 10px var(--accent-os)'; }
+    else { flameEl.textContent = '🔥'; flameEl.style.textShadow = 'none'; }
+  }
 
   document.getElementById('ringPctDsa').textContent = progress.dsa.pct + '%';
   document.getElementById('ringPctMl').textContent = progress.ml.pct + '%';
@@ -432,6 +439,13 @@ function renderDashboard() {
   const level = Math.floor(xp / 100) + 1;
   const currentXP = xp % 100;
   document.getElementById('statLevel').textContent = level;
+  
+  if (appState.lastLevel && level > appState.lastLevel) {
+    shootConfetti();
+    showToast(`Level Up! You reached Level ${level} 🏆`);
+  }
+  appState.lastLevel = level;
+
   document.getElementById('xpText').textContent = `${currentXP} / 100 XP`;
   document.getElementById('xpBar').style.width = currentXP + '%';
 
@@ -848,17 +862,28 @@ function logPing(ms) {
 
 // ── UTILITIES ──
 function resetAllProgress() {
-  if (!confirm('Reset all progress? This cannot be undone.')) return;
+  document.getElementById('resetModal').classList.add('open');
+}
+
+function closeResetModal(e, force = false) {
+  if (force || (e && e.target.id === 'resetModal')) {
+    document.getElementById('resetModal').classList.remove('open');
+  }
+}
+
+function confirmResetAll() {
+  closeResetModal(null, true);
   appState.completed = {};
   appState.streak = 0;
   appState.lastActiveDate = null;
   appState.xp = 0;
   appState.heatmap = {};
   appState.notes = {};
+  appState.lastLevel = 1;
   saveState();
   renderDashboard();
   renderChecklist();
-  showToast('Progress reset');
+  showToast('Progress reset 🗑️');
 }
 
 function exportProgress() {

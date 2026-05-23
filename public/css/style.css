@@ -1141,15 +1141,19 @@ body::before {
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  padding: 9px 12px;
-  border-radius: 6px;
+  padding: 10px 12px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
   cursor: pointer;
-  transition: background 0.15s;
-  border: 1px solid transparent;
-  position: relative;
+  user-select: none;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
-
-.cl-item:hover { background: var(--bg-hover); }
+.cl-item:hover {
+  background: var(--bg-hover);
+  transform: translateX(4px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
 
 .cl-item.done {
   background: var(--done-bg);
@@ -1180,21 +1184,27 @@ body::before {
 }
 
 .cl-checkmark {
-  display: none;
+  display: block;
+  opacity: 0;
+  transform: scale(0);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   color: var(--bg-primary);
   font-size: 11px;
   font-weight: 700;
   line-height: 1;
 }
 
-.cl-item.done .cl-checkmark { display: block; }
+.cl-item.done .cl-checkmark { 
+  opacity: 1;
+  transform: scale(1);
+}
 
 .cl-item-text {
   font-size: 13px;
   color: var(--text-secondary);
   line-height: 1.5;
   flex: 1;
-  transition: color 0.15s;
+  transition: all 0.2s ease;
 }
 
 .cl-item.done .cl-item-text {
