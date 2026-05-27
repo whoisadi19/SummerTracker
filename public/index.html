@@ -112,72 +112,25 @@
     <section class="view active" id="view-dashboard">
       <div class="view-container">
 
-        <!-- Greeting -->
-        <div class="greeting-banner" id="greetingBanner">
-          <div class="greeting-text">
-            <div class="greeting-eyebrow" id="greetingEyebrow">SUMMER 2026 · STUDY PLAN</div>
-            <h1 class="greeting-title" id="greetingTitle">Good afternoon, Aditya</h1>
-            <div class="greeting-sub" id="greetingSub">Day 1 of 42 · Week 1</div>
-          </div>
-          <div class="greeting-streak" id="greetingStreak">
-            <div class="streak-flame" id="streakFlame">🔥</div>
-            <div class="streak-count" id="streakCount">0</div>
-            <div class="streak-label">day streak</div>
-          </div>
-        </div>
-
-        <!-- Progress Rings -->
-        <div class="progress-rings">
-          <div class="ring-card" id="ringDsa">
-            <svg class="ring-svg" viewBox="0 0 120 120">
-              <circle class="ring-bg" cx="60" cy="60" r="52" />
-              <circle class="ring-fill dsa" cx="60" cy="60" r="52" id="ringFillDsa" />
-            </svg>
-            <div class="ring-label">
-              <div class="ring-pct" id="ringPctDsa">0%</div>
-              <div class="ring-name">DSA</div>
-            </div>
-          </div>
-          <div class="ring-card" id="ringMl">
-            <svg class="ring-svg" viewBox="0 0 120 120">
-              <circle class="ring-bg" cx="60" cy="60" r="52" />
-              <circle class="ring-fill ml" cx="60" cy="60" r="52" id="ringFillMl" />
-            </svg>
-            <div class="ring-label">
-              <div class="ring-pct" id="ringPctMl">0%</div>
-              <div class="ring-name">ML</div>
-            </div>
-          </div>
-          <div class="ring-card" id="ringOverall">
-            <svg class="ring-svg" viewBox="0 0 120 120">
-              <circle class="ring-bg" cx="60" cy="60" r="52" />
-              <circle class="ring-fill overall" cx="60" cy="60" r="52" id="ringFillOverall" />
-            </svg>
-            <div class="ring-label">
-              <div class="ring-pct" id="ringPctOverall">0%</div>
-              <div class="ring-name">Overall</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="dash-grid">
-          <!-- Left Column -->
-          <div class="dash-col">
-            <!-- Today's Agenda -->
-            <div class="today-panel">
-              <div class="panel-header">
-                <h2 class="panel-title">Today's Agenda</h2>
-                <span class="panel-date" id="todayDate"></span>
+        <div class="bento-dashboard">
+          
+          <!-- Top Row: Greeting & Quick Stats -->
+          <div class="bento-greeting">
+            <div class="greeting-banner" id="greetingBanner">
+              <div class="greeting-text">
+                <div class="greeting-eyebrow" id="greetingEyebrow">SUMMER 2026 · STUDY PLAN</div>
+                <h1 class="greeting-title" id="greetingTitle">Good afternoon, Aditya</h1>
+                <div class="greeting-sub" id="greetingSub">Day 1 of 42 · Week 1</div>
               </div>
-              <div class="today-cards" id="todayCards">
-                <!-- Populated by JS -->
+              <div class="greeting-streak" id="greetingStreak">
+                <div class="streak-flame" id="streakFlame">🔥</div>
+                <div class="streak-count" id="streakCount">0</div>
+                <div class="streak-label">day streak</div>
               </div>
             </div>
           </div>
 
-          <!-- Right Column -->
-          <div class="dash-col">
-            <!-- Quick Stats -->
+          <div class="bento-stats">
             <div class="quick-stats">
               <div class="stat-card">
                 <div class="stat-value" id="statDsaDone">0</div>
@@ -196,7 +149,58 @@
                 <div class="stat-label">Days Left</div>
               </div>
             </div>
+          </div>
 
+          <!-- Middle Row: Progress Rings -->
+          <div class="bento-rings">
+            <div class="progress-rings">
+              <div class="ring-card" id="ringDsa">
+                <svg class="ring-svg" viewBox="0 0 120 120">
+                  <circle class="ring-bg" cx="60" cy="60" r="52" />
+                  <circle class="ring-fill dsa" cx="60" cy="60" r="52" id="ringFillDsa" />
+                </svg>
+                <div class="ring-label">
+                  <div class="ring-pct" id="ringPctDsa">0%</div>
+                  <div class="ring-name">DSA</div>
+                </div>
+              </div>
+              <div class="ring-card" id="ringMl">
+                <svg class="ring-svg" viewBox="0 0 120 120">
+                  <circle class="ring-bg" cx="60" cy="60" r="52" />
+                  <circle class="ring-fill ml" cx="60" cy="60" r="52" id="ringFillMl" />
+                </svg>
+                <div class="ring-label">
+                  <div class="ring-pct" id="ringPctMl">0%</div>
+                  <div class="ring-name">ML</div>
+                </div>
+              </div>
+              <div class="ring-card" id="ringOverall">
+                <svg class="ring-svg" viewBox="0 0 120 120">
+                  <circle class="ring-bg" cx="60" cy="60" r="52" />
+                  <circle class="ring-fill overall" cx="60" cy="60" r="52" id="ringFillOverall" />
+                </svg>
+                <div class="ring-label">
+                  <div class="ring-pct" id="ringPctOverall">0%</div>
+                  <div class="ring-name">Overall</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bottom Row: Today's Agenda & Side Panel -->
+          <div class="bento-today">
+            <div class="today-panel">
+              <div class="panel-header">
+                <h2 class="panel-title">Today's Agenda</h2>
+                <span class="panel-date" id="todayDate"></span>
+              </div>
+              <div class="today-cards" id="todayCards">
+                <!-- Populated by JS -->
+              </div>
+            </div>
+          </div>
+
+          <div class="bento-side">
             <!-- Heatmap -->
             <div class="heatmap-panel">
               <div class="panel-header">
@@ -222,6 +226,7 @@
               <div class="cprog-bar"><div class="cprog-fill rev" id="xpBar"></div></div>
             </div>
           </div>
+
         </div>
 
       </div>
