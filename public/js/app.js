@@ -571,7 +571,7 @@ function toggleChecklistWeek(id) { document.getElementById(id).classList.toggle(
 
 function getChecklistData() {
   if (!appState.checklistData) {
-    if (typeof getChecklistData() === 'undefined') return null;
+    if (typeof CHECKLIST_DATA === 'undefined') return null;
     appState.checklistData = JSON.parse(JSON.stringify(CHECKLIST_DATA));
     saveState();
   }
