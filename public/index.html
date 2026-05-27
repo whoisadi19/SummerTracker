@@ -112,92 +112,128 @@
     <section class="view active" id="view-dashboard">
       <div class="view-container">
 
-        <!-- Greeting -->
+        <!-- Sleek Top Greeting Banner with Integrated Streak Badge -->
         <div class="greeting-banner" id="greetingBanner">
           <div class="greeting-text">
-            <div class="greeting-eyebrow" id="greetingEyebrow">SUMMER 2026 · STUDY PLAN</div>
+            <div class="greeting-eyebrow" id="greetingEyebrow">SUMMER 2026 · SYSTEM STATUS</div>
             <h1 class="greeting-title" id="greetingTitle">Good afternoon, Aditya</h1>
             <div class="greeting-sub" id="greetingSub">Day 1 of 42 · Week 1</div>
           </div>
+          
           <div class="greeting-streak" id="greetingStreak">
-            <div class="streak-flame" id="streakFlame">🔥</div>
-            <div class="streak-count" id="streakCount">0</div>
-            <div class="streak-label">day streak</div>
+            <span class="streak-flame" id="streakFlame">🔥</span>
+            <span class="streak-count" id="streakCount">0</span>
+            <span class="streak-label">day streak</span>
           </div>
         </div>
 
-        <!-- Progress Rings -->
-        <div class="progress-rings">
-          <div class="ring-card" id="ringDsa">
-            <svg class="ring-svg" viewBox="0 0 120 120">
-              <circle class="ring-bg" cx="60" cy="60" r="52" />
-              <circle class="ring-fill dsa" cx="60" cy="60" r="52" id="ringFillDsa" />
-            </svg>
-            <div class="ring-label">
-              <div class="ring-pct" id="ringPctDsa">0%</div>
-              <div class="ring-name">DSA</div>
-            </div>
-          </div>
-          <div class="ring-card" id="ringMl">
-            <svg class="ring-svg" viewBox="0 0 120 120">
-              <circle class="ring-bg" cx="60" cy="60" r="52" />
-              <circle class="ring-fill ml" cx="60" cy="60" r="52" id="ringFillMl" />
-            </svg>
-            <div class="ring-label">
-              <div class="ring-pct" id="ringPctMl">0%</div>
-              <div class="ring-name">ML</div>
-            </div>
-          </div>
-          <div class="ring-card" id="ringOverall">
-            <svg class="ring-svg" viewBox="0 0 120 120">
-              <circle class="ring-bg" cx="60" cy="60" r="52" />
-              <circle class="ring-fill overall" cx="60" cy="60" r="52" id="ringFillOverall" />
-            </svg>
-            <div class="ring-label">
-              <div class="ring-pct" id="ringPctOverall">0%</div>
-              <div class="ring-name">Overall</div>
-            </div>
-          </div>
-        </div>
-
+        <!-- Cohesive Dashboard Grid -->
         <div class="dash-focus-grid">
-          <!-- Main Column (Left) -->
+          
+          <!-- LEFT COLUMN: Focus Agenda & Activity -->
           <div class="dash-main-col">
-            <!-- Today's Agenda -->
+            
+            <!-- Today's Agenda Card -->
             <div class="today-panel">
               <div class="panel-header">
-                <h2 class="panel-title">Today's Agenda</h2>
+                <h2 class="panel-title">Today's Focus Agenda</h2>
                 <span class="panel-date" id="todayDate"></span>
               </div>
               <div class="today-cards" id="todayCards">
-                <!-- Populated by JS -->
+                <!-- Dynamically Populated by JS -->
               </div>
             </div>
+
+            <!-- Seamless Motivation Badge -->
+            <div class="motivation-banner">
+              <div class="motivation-icon">⚡</div>
+              <div class="motivation-content">
+                <h4 class="motivation-title">Intelligent Summer Study Hub</h4>
+                <p class="motivation-desc">Your daily curriculum is structured for a 6–7 hours afternoon & evening study routine. Maintain consistency to unlock custom XP rewards and build your streak.</p>
+              </div>
+            </div>
+
           </div>
 
-          <!-- Side Column (Right) -->
+          <!-- RIGHT COLUMN: Unified Performance Hub -->
           <div class="dash-side-col">
-            <!-- Quick Stats -->
-            <div class="quick-stats">
-              <div class="stat-card">
-                <div class="stat-value" id="statDsaDone">0</div>
-                <div class="stat-label">DSA Done</div>
+            
+            <!-- Unified Progress & Metrics Hub Card -->
+            <div class="performance-hub-card">
+              <h3 class="hub-title">Performance Analytics</h3>
+              
+              <!-- 3 Progress Rings (Compact Layout) -->
+              <div class="compact-rings">
+                <div class="compact-ring-item">
+                  <svg class="ring-svg" viewBox="0 0 120 120">
+                    <circle class="ring-bg" cx="60" cy="60" r="52" />
+                    <circle class="ring-fill dsa" cx="60" cy="60" r="52" id="ringFillDsa" />
+                  </svg>
+                  <div class="ring-info">
+                    <span class="ring-pct" id="ringPctDsa">0%</span>
+                    <span class="ring-name">DSA</span>
+                  </div>
+                </div>
+                
+                <div class="compact-ring-item">
+                  <svg class="ring-svg" viewBox="0 0 120 120">
+                    <circle class="ring-bg" cx="60" cy="60" r="52" />
+                    <circle class="ring-fill ml" cx="60" cy="60" r="52" id="ringFillMl" />
+                  </svg>
+                  <div class="ring-info">
+                    <span class="ring-pct" id="ringPctMl">0%</span>
+                    <span class="ring-name">ML</span>
+                  </div>
+                </div>
+                
+                <div class="compact-ring-item">
+                  <svg class="ring-svg" viewBox="0 0 120 120">
+                    <circle class="ring-bg" cx="60" cy="60" r="52" />
+                    <circle class="ring-fill overall" cx="60" cy="60" r="52" id="ringFillOverall" />
+                  </svg>
+                  <div class="ring-info">
+                    <span class="ring-pct" id="ringPctOverall">0%</span>
+                    <span class="ring-name">Overall</span>
+                  </div>
+                </div>
               </div>
-              <div class="stat-card">
-                <div class="stat-value" id="statMlDone">0</div>
-                <div class="stat-label">ML Done</div>
+
+              <!-- XP Panel Integrated -->
+              <div class="xp-integration">
+                <div class="xp-meta">
+                  <span class="xp-title">Experience Points</span>
+                  <span class="xp-text" id="xpText">0 / 100 XP</span>
+                </div>
+                <div class="xp-bar-container">
+                  <div class="xp-bar-fill" id="xpBar"></div>
+                </div>
               </div>
-              <div class="stat-card">
-                <div class="stat-value" id="statLevel">1</div>
-                <div class="stat-label">Your Level</div>
-              </div>
-              <div class="stat-card">
-                <div class="stat-value" id="statDaysLeft">42</div>
-                <div class="stat-label">Days Left</div>
+
+              <!-- Integrated Metrics (Borderless Columns) -->
+              <div class="metrics-grid">
+                <div class="metric-item dsa-metric">
+                  <span class="metric-val-num" id="statDsaDone">0</span>
+                  <span class="metric-label-text">DSA Done</span>
+                </div>
+                
+                <div class="metric-item ml-metric">
+                  <span class="metric-val-num" id="statMlDone">0</span>
+                  <span class="metric-label-text">ML Done</span>
+                </div>
+                
+                <div class="metric-item level-metric">
+                  <span class="metric-val-num" id="statLevel">1</span>
+                  <span class="metric-label-text">Your Level</span>
+                </div>
+                
+                <div class="metric-item days-metric">
+                  <span class="metric-val-num" id="statDaysLeft">42</span>
+                  <span class="metric-label-text">Days Left</span>
+                </div>
               </div>
             </div>
 
-            <!-- Heatmap -->
+            <!-- Heatmap Card -->
             <div class="heatmap-panel">
               <div class="panel-header">
                 <h2 class="panel-title">Activity Heatmap</h2>
@@ -209,18 +245,13 @@
                 </div>
               </div>
               <div class="heatmap-grid" id="heatmapGrid">
-                <!-- Populated by JS (6 cols x 7 rows) -->
+                <!-- Dynamically Populated by JS -->
+              </div>
+              <div class="heatmap-footer-note">
+                Click any cell to log daily study reviews & notes
               </div>
             </div>
 
-            <!-- Leveling Progress -->
-            <div class="xp-panel">
-              <div class="xp-header">
-                <span class="xp-title">Experience Points</span>
-                <span class="xp-text" id="xpText">0 / 200 XP</span>
-              </div>
-              <div class="cprog-bar"><div class="cprog-fill rev" id="xpBar"></div></div>
-            </div>
           </div>
         </div>
 
