@@ -38,6 +38,14 @@
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
         <span>Resources</span>
       </button>
+      <button class="nav-item" data-view="pomodoro" onclick="navigate('pomodoro')">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <span>Pomodoro</span>
+      </button>
+      <button class="nav-item" data-view="insights" onclick="navigate('insights')">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        <span>Insights</span>
+      </button>
       <button class="nav-item" data-view="pinger" onclick="navigate('pinger')">
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/><circle cx="12" cy="12" r="3"/></svg>
         <span>Pinger</span>
@@ -80,6 +88,14 @@
     <button class="mob-nav-item" data-view="resources" onclick="navigate('resources')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
       <span>Resources</span>
+    </button>
+    <button class="mob-nav-item" data-view="pomodoro" onclick="navigate('pomodoro')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <span>Pomo</span>
+    </button>
+    <button class="mob-nav-item" data-view="insights" onclick="navigate('insights')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      <span>Insights</span>
     </button>
     <button class="mob-nav-item" data-view="pinger" onclick="navigate('pinger')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/><circle cx="12" cy="12" r="3"/></svg>
@@ -155,31 +171,6 @@
               </div>
               <div class="today-cards" id="todayCards">
                 <!-- Populated by JS -->
-              </div>
-            </div>
-
-            <!-- Pomodoro Widget -->
-            <div class="pomodoro-widget" id="pomodoroWidget">
-              <div class="pomo-header">
-                <h2 class="panel-title">Focus Session</h2>
-                <div class="pomo-mode" id="pomoMode">Work</div>
-              </div>
-              <div class="pomo-body">
-                <div class="pomo-timer">
-                  <svg class="pomo-svg" viewBox="0 0 200 200">
-                    <circle class="pomo-bg" cx="100" cy="100" r="90" />
-                    <circle class="pomo-fill" cx="100" cy="100" r="90" id="pomoRing" />
-                  </svg>
-                  <div class="pomo-time" id="pomoTime">25:00</div>
-                </div>
-                <div class="pomo-controls">
-                  <button class="pomo-btn" onclick="togglePomodoro()"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none" id="pomoPlayIcon"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg></button>
-                  <button class="pomo-btn reset" onclick="resetPomodoro()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></button>
-                </div>
-              </div>
-              <div class="pomo-presets">
-                <button class="pomo-preset active" onclick="setPomodoroMode('work')">25m Work</button>
-                <button class="pomo-preset" onclick="setPomodoroMode('break')">5m Break</button>
               </div>
             </div>
           </div>
@@ -357,6 +348,141 @@
           <!-- Populated dynamically by app.js -->
         </div>
 
+      </div>
+    </section>
+
+    <!-- ─── POMODORO VIEW ─── -->
+    <section class="view" id="view-pomodoro">
+      <div class="view-container">
+        <div class="view-header">
+          <div>
+            <div class="view-eyebrow">YPT STUDY TIMER</div>
+            <h1 class="view-title">Focus <span class="c-dsa">Session</span></h1>
+          </div>
+          <div class="schedule-meta">
+            <span>Select a subject, start study tracking, and gain experience</span>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 340px; gap: 24px; margin-top: 24px; align-items: start;" class="pomo-grid-layout">
+          <!-- Timer Area -->
+          <div class="res-card" style="display:flex; flex-direction:column; align-items:center; padding: 40px 24px; gap: 24px;">
+            <!-- Mode buttons -->
+            <div class="pomo-presets" style="width: auto;">
+              <button class="pomo-preset active" id="pomoBtnWork" onclick="setPomodoroMode('work', this)">Work (25m)</button>
+              <button class="pomo-preset" id="pomoBtnBreak" onclick="setPomodoroMode('break', this)">Break (5m)</button>
+            </div>
+
+            <!-- Subject Display -->
+            <div style="text-align: center;">
+              <div style="font-family:'JetBrains Mono', monospace; font-size: 11px; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.15em;">Active Subject</div>
+              <div id="pomoActiveSubjectDisplay" style="font-family:'Syne', sans-serif; font-size: 22px; font-weight: 800; color: var(--accent-dsa); margin-top: 4px;">DSA</div>
+            </div>
+
+            <!-- Large Countdown Ring -->
+            <div class="pomo-timer" style="width: 240px; height: 240px;">
+              <svg class="pomo-svg" viewBox="0 0 200 200">
+                <circle class="pomo-bg" cx="100" cy="100" r="90" />
+                <circle class="pomo-fill" cx="100" cy="100" r="90" id="pomoRing" />
+              </svg>
+              <div class="pomo-time" id="pomoTime" style="font-size: 38px; font-weight: 800;">25:00</div>
+            </div>
+
+            <!-- Control Buttons -->
+            <div class="pomo-controls" style="gap: 16px;">
+              <button class="pomo-btn" id="pomoPlayBtn" onclick="togglePomodoro()"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none" id="pomoPlayIcon"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg></button>
+              <button class="pomo-btn reset" onclick="resetPomodoro()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></button>
+            </div>
+          </div>
+
+          <!-- Subject Selector Area -->
+          <div style="display: flex; flex-direction: column; gap: 20px;">
+            <div class="res-card">
+              <h3 style="font-family:'Syne',sans-serif; font-size:16px; margin-bottom:12px; color:var(--text-primary);">Choose Subject</h3>
+              <div style="display:flex; flex-direction:column; gap:8px;" id="pomoSubjectContainer">
+                <!-- Populated dynamically -->
+              </div>
+            </div>
+
+            <div class="res-card" style="display:flex; flex-direction:column; gap:12px;">
+              <h3 style="font-family:'Syne',sans-serif; font-size:16px; color:var(--text-primary);">Create Custom Subject</h3>
+              <div style="display:flex; gap:8px;">
+                <input type="text" id="pomoNewSubjectInput" class="form-input" placeholder="e.g. System Design" style="flex:1;">
+                <button class="res-btn primary" onclick="addCustomSubject()" style="padding: 10px 16px;">Add</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── INSIGHTS VIEW ─── -->
+    <section class="view" id="view-insights">
+      <div class="view-container">
+        <div class="view-header">
+          <div>
+            <div class="view-eyebrow">ANALYTICS ENGINE</div>
+            <h1 class="view-title">Study <span class="c-rev">Insights</span></h1>
+          </div>
+          <div class="schedule-meta">
+            <span>Intelligent metrics compiled from your live timer sessions</span>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top:24px;" class="insights-grid">
+          <!-- Time Distribution -->
+          <div class="res-card">
+            <h3 style="font-family:'Syne',sans-serif; font-size:16px; margin-bottom:16px; color:var(--text-primary);">Study Time Distribution</h3>
+            <div id="insightsDistributionBars" style="display:flex; flex-direction:column; gap:16px;">
+              <!-- Populated by JS -->
+            </div>
+          </div>
+
+          <!-- Time Slots Heatmap -->
+          <div class="res-card">
+            <h3 style="font-family:'Syne',sans-serif; font-size:16px; margin-bottom:16px; color:var(--text-primary);">Hourly Study Slots</h3>
+            <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; text-align:center;">
+              <div style="background:var(--bg-surface-2); padding:16px; border-radius:8px; border:1px solid var(--border);">
+                <div style="font-size:24px;">🌅</div>
+                <div style="font-family:'Syne',sans-serif; font-size:13px; font-weight:700; margin-top:6px;">Morning</div>
+                <div style="font-size:11px; color:var(--text-muted); margin-bottom:8px;">6am – 12pm</div>
+                <strong id="insightSlotMorning" style="color:var(--accent-gold);">0h</strong>
+              </div>
+              <div style="background:var(--bg-surface-2); padding:16px; border-radius:8px; border:1px solid var(--border);">
+                <div style="font-size:24px;">☀️</div>
+                <div style="font-family:'Syne',sans-serif; font-size:13px; font-weight:700; margin-top:6px;">Afternoon</div>
+                <div style="font-size:11px; color:var(--text-muted); margin-bottom:8px;">12pm – 6pm</div>
+                <strong id="insightSlotAfternoon" style="color:var(--accent-ml);">0h</strong>
+              </div>
+              <div style="background:var(--bg-surface-2); padding:16px; border-radius:8px; border:1px solid var(--border);">
+                <div style="font-size:24px;">🌌</div>
+                <div style="font-family:'Syne',sans-serif; font-size:13px; font-weight:700; margin-top:6px;">Evening / Night</div>
+                <div style="font-size:11px; color:var(--text-muted); margin-bottom:8px;">6pm – 6am</div>
+                <strong id="insightSlotEvening" style="color:var(--accent-rev);">0h</strong>
+              </div>
+            </div>
+          </div>
+
+          <!-- XP Projections -->
+          <div class="res-card" style="display:flex; flex-direction:column; gap:12px;">
+            <h3 style="font-family:'Syne',sans-serif; font-size:16px; color:var(--text-primary);">XP Velocity & Milestones</h3>
+            <div style="background:var(--bg-surface-2); padding:16px; border-radius:8px; border:1px solid var(--border); line-height:1.5; font-size:13px; color:var(--text-secondary);">
+              🧬 Based on your current level speed, completing <strong style="color:var(--accent-dsa);" id="insightMilestoneHours">0</strong> more hour(s) of study will guarantee your next **Level Up**.
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--text-muted); margin-top:8px;">
+              <span>Daily Average: <strong id="insightDailyAvg">0m</strong></span>
+              <span>Total Tracked: <strong id="insightTotalHours">0h</strong></span>
+            </div>
+          </div>
+
+          <!-- Session Log -->
+          <div class="res-card" style="display:flex; flex-direction:column;">
+            <h3 style="font-family:'Syne',sans-serif; font-size:16px; margin-bottom:12px; color:var(--text-primary);">Recent Sessions</h3>
+            <div style="display:flex; flex-direction:column; gap:8px; max-height:150px; overflow-y:auto;" id="insightsSessionLog">
+              <!-- Populated dynamically -->
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 

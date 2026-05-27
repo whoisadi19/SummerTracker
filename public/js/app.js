@@ -23,6 +23,8 @@ function loadState() {
   } else {
     state.user = null;
   }
+  if (!state.subjects) state.subjects = ['DSA', 'ML'];
+  if (!state.studySessions) state.studySessions = [];
   return state;
 }
 
@@ -152,6 +154,8 @@ function navigate(view) {
   else if (view === 'schedule') renderSchedule();
   else if (view === 'checklist') renderChecklist();
   else if (view === 'resources') renderResources();
+  else if (view === 'pomodoro') renderPomodoroTab();
+  else if (view === 'insights') renderInsightsTab();
   else if (view === 'pinger') renderPinger();
 }
 
@@ -332,11 +336,16 @@ function togglePomodoro() {
         clearInterval(pomoTimer);
         pomoTimer = null;
         showToast('Session Complete! 🍅');
-        if (pomoMode === 'work') { shootConfetti(); appState.xp = (appState.xp||0)+20; saveState(); }
+        if (pomoMode === 'work') {
+          shootConfetti();
+          appState.xp = (appState.xp||0)+20;
+          logStudySession(pomoActiveSubject, 25 * 60);
+          saveState();
+        }
         icon.innerHTML = '<polygon points="5 3 19 12 5 21 5 3"></polygon>';
         renderDashboard(); // Update XP
       }
-      updatePomodoroUI();
+      // updatePomodoroUI(); (handled in Pomodoro tab)
     }, 1000);
     icon.innerHTML = '<rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect>';
   }
@@ -346,14 +355,13 @@ function resetPomodoro() {
   if (pomoTimer) { clearInterval(pomoTimer); pomoTimer = null; }
   document.getElementById('pomoPlayIcon').innerHTML = '<polygon points="5 3 19 12 5 21 5 3"></polygon>';
   pomoTimeLeft = pomoMode === 'work' ? 25 * 60 : 5 * 60;
-  updatePomodoroUI();
+  // updatePomodoroUI(); (handled in Pomodoro tab)
 }
 
-function setPomodoroMode(m) {
+function setPomodoroMode(m, btn) {
   pomoMode = m;
-  document.getElementById('pomoMode').textContent = m === 'work' ? 'Work' : 'Break';
-  document.querySelectorAll('.pomo-preset').forEach(b => b.classList.remove('active'));
-  event.target.classList.add('active');
+  document.getElementById('pomoBtnWork').classList.toggle('active', m === 'work');
+  document.getElementById('pomoBtnBreak').classList.toggle('active', m === 'break');
   resetPomodoro();
 }
 
@@ -449,7 +457,7 @@ function renderDashboard() {
   document.getElementById('xpBar').style.width = currentXP + '%';
 
   renderHeatmap();
-  updatePomodoroUI();
+  // updatePomodoroUI(); (handled in Pomodoro tab)
 }
 
 function renderHeatmap() {
@@ -830,6 +838,166 @@ function handleDrop(e, targetTab, targetWeekNum, targetUnitTitle, targetItemId) 
 function handleDragEnd(e) {
   e.target.classList.remove('dragging');
   document.querySelectorAll('.cl-item').forEach(el => el.classList.remove('drag-over'));
+}
+
+
+// ── YPT POMODORO TAB LOGIC ──
+let pomoActiveSubject = 'DSA';
+
+function renderPomodoroTab() {
+  renderSubjectsList();
+  document.getElementById('pomoActiveSubjectDisplay').textContent = pomoActiveSubject;
+  updatePomodoroUI();
+}
+
+function renderSubjectsList() {
+  const container = document.getElementById('pomoSubjectContainer');
+  if (!container) return;
+  const subjects = appState.subjects || ['DSA', 'ML'];
+  
+  container.innerHTML = subjects.map(sub => `
+    <button class="cl-chip ${sub === pomoActiveSubject ? 'active' : ''}" 
+            onclick="selectPomoSubject('${sub}')" 
+            style="width:100%; text-align:left; padding:12px 16px; justify-content:flex-start; border-radius:8px;">
+      📚 ${sub}
+    </button>
+  `).join('');
+}
+
+function selectPomoSubject(subject) {
+  pomoActiveSubject = subject;
+  document.getElementById('pomoActiveSubjectDisplay').textContent = subject;
+  renderSubjectsList();
+  showToast(`Selected Subject: ${subject}`);
+}
+
+function addCustomSubject() {
+  const input = document.getElementById('pomoNewSubjectInput');
+  const name = input.value.trim();
+  if (!name) return;
+  
+  if (!appState.subjects) appState.subjects = ['DSA', 'ML'];
+  
+  if (appState.subjects.map(s => s.toLowerCase()).includes(name.toLowerCase())) {
+    showToast('Subject already exists!');
+    return;
+  }
+  
+  appState.subjects.push(name);
+  saveState();
+  input.value = '';
+  renderSubjectsList();
+  showToast(`Subject "${name}" added!`);
+}
+
+function logStudySession(subject, durationSeconds) {
+  if (!appState.studySessions) appState.studySessions = [];
+  const session = {
+    id: 'sess-' + Date.now(),
+    subject,
+    duration: durationSeconds,
+    timestamp: new Date().toISOString()
+  };
+  appState.studySessions.push(session);
+  
+  // Track this on heatmap too (as a completed task!)
+  const dStr = new Date().toISOString().split('T')[0];
+  if (!appState.heatmap) appState.heatmap = {};
+  appState.heatmap[dStr] = (appState.heatmap[dStr] || 0) + 1;
+}
+
+// ── STUDY INSIGHTS TAB LOGIC ──
+function renderInsightsTab() {
+  const sessions = appState.studySessions || [];
+  
+  // 1. Calculate time distribution
+  const totals = {};
+  sessions.forEach(s => {
+    totals[s.subject] = (totals[s.subject] || 0) + (s.duration / 3600);
+  });
+  
+  const distContainer = document.getElementById('insightsDistributionBars');
+  if (distContainer) {
+    const keys = Object.keys(totals);
+    if (keys.length === 0) {
+      distContainer.innerHTML = `<div style="text-align:center; color:var(--text-muted); font-size:13px; padding:20px;">No study sessions tracked yet. Run the timer to collect insights!</div>`;
+    } else {
+      const maxHours = Math.max(...Object.values(totals), 1);
+      distContainer.innerHTML = keys.map(k => {
+        const hours = totals[k];
+        const pct = (hours / maxHours) * 100;
+        let colorClass = 'rev';
+        if (k.toLowerCase() === 'dsa') colorClass = 'dsa';
+        else if (k.toLowerCase() === 'ml') colorClass = 'ml';
+        
+        return `
+          <div>
+            <div style="display:flex; justify-content:between; font-size:13px; margin-bottom:4px;">
+              <span style="font-weight:700; color:var(--text-primary);">${k}</span>
+              <span style="color:var(--text-muted); margin-left:auto;">${hours.toFixed(1)} hrs</span>
+            </div>
+            <div class="cprog-bar"><div class="cprog-fill ${colorClass}" style="width:${pct}%; background: var(--accent-${colorClass === 'rev' ? 'rev' : colorClass});"></div></div>
+          </div>
+        `;
+      }).join('');
+    }
+  }
+  
+  // 2. Study Slots Breakdown
+  let morningSess = 0, afternoonSess = 0, eveningSess = 0;
+  sessions.forEach(s => {
+    const hr = new Date(s.timestamp).getHours();
+    const hrs = s.duration / 3600;
+    if (hr >= 6 && hr < 12) morningSess += hrs;
+    else if (hr >= 12 && hr < 18) afternoonSess += hrs;
+    else eveningSess += hrs;
+  });
+  
+  document.getElementById('insightSlotMorning').textContent = morningSess.toFixed(1) + 'h';
+  document.getElementById('insightSlotAfternoon').textContent = afternoonSess.toFixed(1) + 'h';
+  document.getElementById('insightSlotEvening').textContent = eveningSess.toFixed(1) + 'h';
+  
+  // 3. XP Projections & Averages
+  const totalHours = sessions.reduce((acc, s) => acc + (s.duration / 3600), 0);
+  document.getElementById('insightTotalHours').textContent = totalHours.toFixed(1) + 'h';
+  
+  // Calculate Daily Average (over the study period)
+  const uniqueDays = new Set(sessions.map(s => s.timestamp.split('T')[0])).size || 1;
+  const dailyAvgMin = (totalHours * 60) / uniqueDays;
+  document.getElementById('insightDailyAvg').textContent = dailyAvgMin >= 60 ? (dailyAvgMin / 60).toFixed(1) + 'h' : Math.round(dailyAvgMin) + 'm';
+  
+  // XP MileStone: Level Up is every 100 XP. Timer gives 20 XP per completed work session (25 mins = 0.42 hrs).
+  // So to get 100 XP from timer alone, you need 5 work sessions = 125 mins = 2.08 hours.
+  // Next Level up requires: (100 - (xp % 100)) / 20 * 25 mins.
+  const xp = appState.xp || 0;
+  const xpNeeded = 100 - (xp % 100);
+  const workSessionsNeeded = Math.ceil(xpNeeded / 20);
+  const hoursNeeded = (workSessionsNeeded * 25) / 60;
+  document.getElementById('insightMilestoneHours').textContent = hoursNeeded.toFixed(1);
+  
+  // 4. Session Log
+  const logContainer = document.getElementById('insightsSessionLog');
+  if (logContainer) {
+    if (sessions.length === 0) {
+      logContainer.innerHTML = `<div style="text-align:center; color:var(--text-muted); font-size:12px; padding:10px;">No recent sessions logged</div>`;
+    } else {
+      const reversed = [...sessions].reverse().slice(0, 10);
+      logContainer.innerHTML = reversed.map(s => {
+        const date = new Date(s.timestamp);
+        const dateStr = date.toLocaleDateString(undefined, {month: 'short', day: 'numeric'});
+        const timeStr = date.toLocaleTimeString(undefined, {hour: '2-digit', minute:'2-digit'});
+        return `
+          <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-surface-2); padding:8px 12px; border-radius:6px; border:1px solid var(--border); font-size:12px;">
+            <div>
+              <span style="font-weight:700; color:var(--text-primary);">${s.subject}</span>
+              <span style="color:var(--text-muted); font-size:10px; margin-left:6px;">${dateStr} at ${timeStr}</span>
+            </div>
+            <strong style="color:var(--accent-ml);">${Math.round(s.duration / 60)} mins</strong>
+          </div>
+        `;
+      }).join('');
+    }
+  }
 }
 
 // ── RESOURCES VIEW (CUSTOM MANAGER) ──

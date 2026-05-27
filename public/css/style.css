@@ -2066,3 +2066,10 @@ body::before {
 .res-btn.secondary { background: transparent; border: 1px solid var(--border); color: var(--text-secondary); }
 .res-btn.secondary:hover { background: var(--bg-hover); color: var(--text-primary); }
 
+
+/* -- MOBILE RESPONSIVENESS FOR NEW VIEWS -- */
+@media (max-width: 768px) {
+  .pomo-grid-layout { grid-template-columns: 1fr !important; }
+  .insights-grid { grid-template-columns: 1fr !important; }
+}
+
