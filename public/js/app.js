@@ -8,8 +8,7 @@ let appState = loadState();
 
 function loadState() {
   let state = { 
-    completed: {}, theme: 'cyber', streak: 0, bestStreak: 0, 
-    lastActiveDate: null, xp: 0, heatmap: {}, notes: {}
+    completed: {}, theme: 'cyber', streak: 0, bestStreak: 0, lastActiveDate: null, xp: 0, heatmap: {}, notes: {}, checklistData: null
   };
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -193,8 +192,8 @@ function getProgress() {
   let dsaTotal = 0, dsaDone = 0;
   let mlTotal = 0, mlDone = 0;
 
-  if (typeof CHECKLIST_DATA !== 'undefined') {
-    CHECKLIST_DATA.dsa.forEach(week => {
+  if (typeof getChecklistData() !== 'undefined') {
+    getChecklistData().dsa.forEach(week => {
       week.units.forEach(unit => {
         unit.items.forEach(item => {
           dsaTotal++;
@@ -203,7 +202,7 @@ function getProgress() {
       });
     });
 
-    CHECKLIST_DATA.ml.forEach(week => {
+    getChecklistData().ml.forEach(week => {
       week.units.forEach(unit => {
         unit.items.forEach(item => {
           mlTotal++;
@@ -224,8 +223,8 @@ function getProgress() {
 }
 
 function getWeekProgress(type, weekNum) {
-  if (typeof CHECKLIST_DATA === 'undefined') return { total: 0, done: 0 };
-  const weekData = CHECKLIST_DATA[type].find(w => w.week === weekNum);
+  if (typeof getChecklistData() === 'undefined') return { total: 0, done: 0 };
+  const weekData = getChecklistData()[type].find(w => w.week === weekNum);
   if (!weekData) return { total: 0, done: 0 };
 
   let total = 0, done = 0;
@@ -421,7 +420,7 @@ function renderDashboard() {
         ${isPreview ? `<div class="preview-badge" style="grid-column: 1 / -1; background: rgba(0, 229, 255, 0.1); border: 1px dashed var(--accent-dsa); color: var(--accent-dsa); padding: 8px 12px; border-radius: 8px; font-family: 'Outfit', sans-serif; font-size: 13px; text-align: center; margin-bottom: 8px;">⏳ Plan starts soon! Showing Day 1 Preview:</div>` : ''}
         <div class="today-card"><div class="today-dot dsa"></div><div><div class="today-card-label dsa">DSA</div><div class="today-card-text">${day.dsa}</div></div></div>
         <div class="today-card"><div class="today-dot ml"></div><div><div class="today-card-label ml">ML</div><div class="today-card-text">${day.ml}</div></div></div>
-        <div class="today-card"><div class="today-dot os"></div><div><div class="today-card-label os">Open Source</div><div class="today-card-text">${day.os}</div></div></div>
+        
       `;
     } else {
       todayCards.innerHTML = `<div class="today-empty">📋 No specific tasks for today</div>`;
@@ -537,32 +536,23 @@ function renderSchedule() {
             <div class="wcard-left"><div class="wnum">Week ${String(wNum).padStart(2, '0')}</div><div><div class="wtitle">${week.title}</div><div class="wdates">${week.dates}</div></div></div>
             <div class="wcard-right"><div class="wtags">${week.tags.map(t => `<span class="wtag ${t.type}">${t.label}</span>`).join('')}</div><div class="chevron">▾</div></div>
           </div>
-          <div class="wcard-body">
-            <div class="days-label">Daily Breakdown</div>
-            <div class="day-rows">
-              ${week.days.map((day, di) => {
-                const isToday = isCurrent && (info.dayIndex % 7 === di);
-                
-                // Calculate date string for notes
-                const dayDate = new Date(startObj);
-                dayDate.setDate(dayDate.getDate() + ((wNum-1)*7) + di);
-                const dStr = dayDate.toISOString().split('T')[0];
-                const hasNotes = appState.notes && appState.notes[dStr] ? 'has-notes' : '';
-
-                return `
-                  <div class="day-row${isToday ? ' today-row' : ''}">
-                    <div class="day-name">
-                      ${day.name}
-                      <button class="day-notes-btn ${hasNotes}" onclick="openNotesModal('${dStr}')" title="Add/Edit Notes">
-                         ${hasNotes ? '📝 Notes' : '+ Note'}
-                      </button>
-                    </div>
-                    <div class="day-cell dsa"><div class="day-cell-label">DSA</div><div class="day-cell-val">${day.dsa}</div></div>
-                    <div class="day-cell ml"><div class="day-cell-label">ML</div><div class="day-cell-val">${day.ml}</div></div>
-                    <div class="day-cell os"><div class="day-cell-label">Open Source</div><div class="day-cell-val">${day.os}</div></div>
-                  </div>
-                `;
-              }).join('')}
+          <div class="wcard-body" style="padding: 16px 22px;">
+            <div class="days-label" style="font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 16px;">Weekly Goals</div>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              ${week.targets.dsa ? `
+                <div style="margin-bottom: 12px;">
+                  <strong style="color: var(--accent-dsa); font-size: 14px; font-family: 'Syne', sans-serif;">DSA:</strong>
+                  <ul style="list-style-type: disc; margin-left: 20px; font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin-top: 4px;">
+                    ${week.targets.dsa.map(t => `<li>${t}</li>`).join('')}
+                  </ul>
+                </div>` : ''}
+              ${week.targets.ml ? `
+                <div>
+                  <strong style="color: var(--accent-ml); font-size: 14px; font-family: 'Syne', sans-serif;">ML:</strong>
+                  <ul style="list-style-type: disc; margin-left: 20px; font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin-top: 4px;">
+                    ${week.targets.ml.map(t => `<li>${t}</li>`).join('')}
+                  </ul>
+                </div>` : ''}
             </div>
           </div>
         </div>
@@ -578,12 +568,22 @@ function toggleScheduleWeek(id) { document.getElementById(id).classList.toggle('
 function toggleChecklistWeek(id) { document.getElementById(id).classList.toggle('open'); }
 
 // ── RENDER: CHECKLIST ──
+
+function getChecklistData() {
+  if (!appState.checklistData) {
+    if (typeof getChecklistData() === 'undefined') return null;
+    appState.checklistData = JSON.parse(JSON.stringify(CHECKLIST_DATA));
+    saveState();
+  }
+  return appState.checklistData;
+}
+
 let currentChecklistTab = 'dsa';
 let clFilter = 'all';
 let clSearchQuery = '';
 
 function renderChecklist() {
-  if (typeof CHECKLIST_DATA === 'undefined') return;
+  if (typeof getChecklistData() === 'undefined') return;
   const progress = getProgress();
   document.getElementById('clDsaNum').textContent = `${progress.dsa.done} / ${progress.dsa.total}`;
   document.getElementById('clMlNum').textContent = `${progress.ml.done} / ${progress.ml.total}`;
@@ -605,8 +605,8 @@ function setFilter(filter, el) {
 }
 
 function renderChecklistContent() {
-  if (typeof CHECKLIST_DATA === 'undefined') return;
-  const data = CHECKLIST_DATA[currentChecklistTab];
+  if (typeof getChecklistData() === 'undefined') return;
+  const data = getChecklistData()[currentChecklistTab];
   const container = document.getElementById('clContent');
   const info = getTodayInfo();
   let html = '';
@@ -647,14 +647,28 @@ function renderChecklistContent() {
         }).join('');
 
         unitHtml += `
-          <div class="cl-item${isDone ? ' done' : ''}" onclick="toggleItem('${item.id}', this, ${weekData.week})">
+          <div class="cl-item${isDone ? ' done' : ''}" onclick="toggleItem('${item.id}', this, ${weekData.week})"
+               draggable="true" 
+               ondragstart="handleDragStart(event, '${currentChecklistTab}', ${weekData.week}, '${unit.title.replace(/'/g, "\'")}', '${item.id}')"
+               ondragover="handleDragOver(event)"
+               ondragleave="handleDragLeave(event)"
+               ondrop="handleDrop(event, '${currentChecklistTab}', ${weekData.week}, '${unit.title.replace(/'/g, "\'")}', '${item.id}')"
+               ondragend="handleDragEnd(event)">
             <div class="cl-checkbox ${currentChecklistTab}"><span class="cl-checkmark">✓</span></div>
             <div class="cl-item-text">${item.text}</div>
             ${tagBadges}
+            <div class="cl-item-actions">
+               <button class="cl-action-btn" onclick="promptEditChecklistItem('${currentChecklistTab}', ${weekData.week}, '${unit.title.replace(/'/g, "\'")}', '${item.id}', event)">✎</button>
+               <button class="cl-action-btn" onclick="deleteChecklistItem('${currentChecklistTab}', ${weekData.week}, '${unit.title.replace(/'/g, "\'")}', '${item.id}', event)">✕</button>
+            </div>
           </div>
         `;
       });
-      if (unitHtml) weekHtml += `<div class="cl-unit-label">${unit.title}</div><div class="cl-item-list">${unitHtml}</div>`;
+      if (unitHtml) {
+        weekHtml += `<div class="cl-unit-label">${unit.title}</div><div class="cl-item-list">${unitHtml}`;
+        weekHtml += `<button class="cl-add-task-btn" onclick="promptAddChecklistItem('${currentChecklistTab}', ${weekData.week}, '${unit.title.replace(/'/g, "\'")}')">+ Add Task</button>`;
+        weekHtml += `</div>`;
+      }
     });
 
     if (itemsFoundInWeek) {
@@ -708,13 +722,114 @@ function updateChecklistProgress() {
   document.getElementById('clDsaBar').style.width = progress.dsa.pct + '%';
   document.getElementById('clMlBar').style.width = progress.ml.pct + '%';
 
-  if (typeof CHECKLIST_DATA !== 'undefined') {
-    CHECKLIST_DATA[currentChecklistTab].forEach(weekData => {
+  if (typeof getChecklistData() !== 'undefined') {
+    getChecklistData()[currentChecklistTab].forEach(weekData => {
       const wp = getWeekProgress(currentChecklistTab, weekData.week);
       const el = document.querySelector(`#cl-${currentChecklistTab}-w${weekData.week} .cl-week-prog`);
       if (el) el.textContent = `${wp.done}/${wp.total}`;
     });
   }
+}
+
+
+// ── EDITABLE CHECKLIST LOGIC ──
+function promptAddChecklistItem(tab, weekNum, unitTitle) {
+  const text = prompt('Enter new task:');
+  if (!text) return;
+  const data = getChecklistData();
+  const week = data[tab].find(w => w.week === weekNum);
+  let unit = week.units.find(u => u.title === unitTitle);
+  if (!unit) {
+    unit = { title: unitTitle, items: [] };
+    week.units.push(unit);
+  }
+  unit.items.push({ id: 'custom-' + Date.now(), text, tags: ['custom'] });
+  saveState();
+  renderChecklistContent();
+  updateChecklistProgress();
+}
+
+function promptEditChecklistItem(tab, weekNum, unitTitle, itemId, e) {
+  e.stopPropagation();
+  const data = getChecklistData();
+  const week = data[tab].find(w => w.week === weekNum);
+  const unit = week.units.find(u => u.title === unitTitle);
+  const item = unit.items.find(i => i.id === itemId);
+  const newText = prompt('Edit task:', item.text);
+  if (newText) {
+    item.text = newText;
+    saveState();
+    renderChecklistContent();
+  }
+}
+
+function deleteChecklistItem(tab, weekNum, unitTitle, itemId, e) {
+  e.stopPropagation();
+  if (!confirm('Delete this task?')) return;
+  const data = getChecklistData();
+  const week = data[tab].find(w => w.week === weekNum);
+  const unit = week.units.find(u => u.title === unitTitle);
+  unit.items = unit.items.filter(i => i.id !== itemId);
+  delete appState.completed[itemId];
+  saveState();
+  renderChecklistContent();
+  updateChecklistProgress();
+}
+
+let draggedItem = null;
+let dragSourceInfo = null;
+
+function handleDragStart(e, tab, weekNum, unitTitle, itemId) {
+  draggedItem = e.target;
+  dragSourceInfo = { tab, weekNum, unitTitle, itemId };
+  e.dataTransfer.effectAllowed = 'move';
+  setTimeout(() => e.target.classList.add('dragging'), 0);
+}
+
+function handleDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  const target = e.target.closest('.cl-item');
+  if (target && target !== draggedItem) {
+    target.classList.add('drag-over');
+  }
+}
+
+function handleDragLeave(e) {
+  const target = e.target.closest('.cl-item');
+  if (target) target.classList.remove('drag-over');
+}
+
+function handleDrop(e, targetTab, targetWeekNum, targetUnitTitle, targetItemId) {
+  e.preventDefault();
+  document.querySelectorAll('.cl-item').forEach(el => el.classList.remove('drag-over'));
+  if (draggedItem) draggedItem.classList.remove('dragging');
+  
+  if (!dragSourceInfo || dragSourceInfo.itemId === targetItemId) return;
+  
+  const data = getChecklistData();
+  // Find source
+  const sWeek = data[dragSourceInfo.tab].find(w => w.week === dragSourceInfo.weekNum);
+  const sUnit = sWeek.units.find(u => u.title === dragSourceInfo.unitTitle);
+  const sIdx = sUnit.items.findIndex(i => i.id === dragSourceInfo.itemId);
+  const itemData = sUnit.items[sIdx];
+  
+  // Find target
+  const tWeek = data[targetTab].find(w => w.week === targetWeekNum);
+  const tUnit = tWeek.units.find(u => u.title === targetUnitTitle);
+  const tIdx = tUnit.items.findIndex(i => i.id === targetItemId);
+  
+  // Move
+  sUnit.items.splice(sIdx, 1);
+  tUnit.items.splice(tIdx, 0, itemData);
+  
+  saveState();
+  renderChecklistContent();
+}
+
+function handleDragEnd(e) {
+  e.target.classList.remove('dragging');
+  document.querySelectorAll('.cl-item').forEach(el => el.classList.remove('drag-over'));
 }
 
 // ── RESOURCES VIEW ──
@@ -1013,7 +1128,7 @@ function init() {
     fetchCloudProgress();
   }
 
-  if (typeof CHECKLIST_DATA === 'undefined' || typeof SCHEDULE_DATA === 'undefined') {
+  if (typeof getChecklistData() === 'undefined' || typeof SCHEDULE_DATA === 'undefined') {
     console.warn('Data not loaded yet. Some features may not work.');
   }
 }

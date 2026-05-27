@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Summer Study Hub — Aditya | DSA · ML · Open Source</title>
-  <meta name="description" content="Aditya's Summer 2026 Study Hub — Track DSA, Machine Learning, and Open Source progress. May 24 – July 5, 2026.">
+  <title>Summer Study Hub — Aditya | DSA · ML</title>
+  <meta name="description" content="Aditya's Summer 2026 Study Hub — Track DSA and Machine Learning progress. May 24 – July 5, 2026.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -244,8 +244,7 @@
             <div class="view-eyebrow">SUMMER 2026</div>
             <h1 class="view-title">
               <span class="c-dsa">DSA.</span><br>
-              <span class="c-ml">ML.</span><br>
-              <span class="c-os">Open Source.</span>
+              <span class="c-ml">ML.</span>
             </h1>
           </div>
           <div class="schedule-meta">
@@ -259,47 +258,10 @@
         <div class="legend">
           <div class="legend-item"><div class="ldot dsa"></div>DSA · C++</div>
           <div class="legend-item"><div class="ldot ml"></div>Andrew Ng ML</div>
-          <div class="legend-item"><div class="ldot os"></div>Open Source</div>
           <div class="legend-item"><div class="ldot rev"></div>Review</div>
         </div>
 
-        <!-- Daily Time Structure -->
-        <div class="daily-panel">
-          <div class="section-label">Daily Time Structure</div>
-          <div class="timeline-bar">
-            <div class="tseg wake">Wake</div>
-            <div class="tseg dsa">DSA</div>
-            <div class="tseg ml">ML</div>
-            <div class="tseg brk">Break</div>
-            <div class="tseg os">OS</div>
-            <div class="tseg rev">Review</div>
-          </div>
-          <div class="time-ruler">
-            <span>12pm</span><span>1pm</span><span>2:30</span><span>4:30</span><span>5:30</span><span>6pm</span><span>7:30</span><span>8:30</span>
-          </div>
-          <div class="blocks-detail">
-            <div class="bcard dsa">
-              <div class="bcard-time">1:00 – 3:30 PM</div>
-              <div class="bcard-name">DSA · C++</div>
-              <div class="bcard-desc">2.5 hrs. Watch Striver → code from memory → submit on LeetCode.</div>
-            </div>
-            <div class="bcard ml">
-              <div class="bcard-time">3:30 – 5:30 PM</div>
-              <div class="bcard-name">Andrew Ng ML</div>
-              <div class="bcard-desc">2 hrs. Videos + assignments. Never skip the assignments.</div>
-            </div>
-            <div class="bcard os">
-              <div class="bcard-time">6:00 – 7:30 PM</div>
-              <div class="bcard-name">Open Source</div>
-              <div class="bcard-desc">1.5 hrs. 3–4x per week. Find issue → implement → PR.</div>
-            </div>
-            <div class="bcard rev">
-              <div class="bcard-time">7:30 – 8:30 PM</div>
-              <div class="bcard-name">Review Block</div>
-              <div class="bcard-desc">1 hr daily. Redo yesterday's problems blind.</div>
-            </div>
-          </div>
-        </div>
+
 
         <!-- Schedule Weeks (populated by JS) -->
         <div id="scheduleWeeks"></div>
@@ -383,7 +345,6 @@
 
         <div class="cl-tabs">
           <button class="cl-tab active" data-tab="dsa-roadmap" onclick="switchResourceTab('dsa-roadmap')">C++ DSA Roadmap</button>
-          <button class="cl-tab" data-tab="os-playbook" onclick="switchResourceTab('os-playbook')">Open Source Playbook</button>
         </div>
 
         <div class="res-content" id="resContent">

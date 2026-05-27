@@ -388,22 +388,16 @@ const SCHEDULE_DATA = [
         "Linear regression intuition",
         "Cost function explained",
         "Complete all quizzes"
-      ],
-      os: [
-        "Set up Antigravity properly",
-        "Run the 3-min repo test on 5 repos",
-        "Pick 1 beginner Python issue",
-        "Goal: 1 PR submitted by Friday"
       ]
     },
     days: [
-      { name: "Sat May 24", dsa: "Setup C++, syntax, data types, I/O cin/cout", ml: "Course 1 intro videos, what is ML, supervised vs unsupervised", os: "Setup Antigravity, read the guide, explore goodfirstissue.dev" },
-      { name: "Sun May 25", dsa: "Control flow, loops, switch. Write 10 small programs", ml: "Linear regression: model representation, hypothesis", os: "Run 3-min test on 5 repos, shortlist 2 candidates" },
-      { name: "Mon May 26", dsa: "Functions, pass by value vs reference (&). Practice both.", ml: "Cost function J(w,b) — understand what minimizing means", os: "Rest day. Use slot for ML catch-up or extra DSA" },
-      { name: "Tue May 27", dsa: "Pointers, memory addresses, dereferencing. Big O notation.", ml: "Gradient descent — intuition, learning rate alpha", os: "Claim your first issue. Run briefing prompt on it." },
-      { name: "Wed May 28", dsa: "STL: std::vector — push_back, size, iterate, sort", ml: "Gradient descent for linear regression, vectorization", os: "Implement the fix, run verification prompt, test suite" },
-      { name: "Thu May 29", dsa: "STL: std::map, std::set, std::unordered_map basics", ml: "Week 1 graded quiz. Redo any videos that felt unclear.", os: "Rest day. Use slot for extra practice." },
-      { name: "Fri May 30", dsa: "STL: stack, queue, priority_queue. std::sort + comparators", ml: "Multiple linear regression, feature scaling", os: "Submit PR #1. Write PR description using polish prompt." }
+      { name: "Sat May 24", dsa: "Setup C++, syntax, data types, I/O cin/cout", ml: "Course 1 intro videos, what is ML, supervised vs unsupervised" },
+      { name: "Sun May 25", dsa: "Control flow, loops, switch. Write 10 small programs", ml: "Linear regression: model representation, hypothesis" },
+      { name: "Mon May 26", dsa: "Functions, pass by value vs reference (&). Practice both.", ml: "Cost function J(w,b) — understand what minimizing means" },
+      { name: "Tue May 27", dsa: "Pointers, memory addresses, dereferencing. Big O notation.", ml: "Gradient descent — intuition, learning rate alpha" },
+      { name: "Wed May 28", dsa: "STL: std::vector — push_back, size, iterate, sort", ml: "Gradient descent for linear regression, vectorization" },
+      { name: "Thu May 29", dsa: "STL: std::map, std::set, std::unordered_map basics", ml: "Week 1 graded quiz. Redo any videos that felt unclear." },
+      { name: "Fri May 30", dsa: "STL: stack, queue, priority_queue. std::sort + comparators", ml: "Multiple linear regression, feature scaling" }
     ]
   },
 
@@ -417,8 +411,7 @@ const SCHEDULE_DATA = [
     phase: 1,
     tags: [
       { label: "DSA Unit 3", type: "dsa" },
-      { label: "ML Week 2", type: "ml" },
-      { label: "PR #2", type: "os" }
+      { label: "ML Week 2", type: "ml" }
     ],
     targets: {
       dsa: [
@@ -435,22 +428,16 @@ const SCHEDULE_DATA = [
         "Sigmoid function, decision boundary",
         "Cost function for classification",
         "Complete Week 2 assignment"
-      ],
-      os: [
-        "Respond to PR #1 feedback if any",
-        "Find and claim PR #2 issue",
-        "Target: Python or Next.js repo",
-        "Submit PR #2 by end of week"
       ]
     },
     days: [
-      { name: "Sat May 31", dsa: "Digit extraction, palindromes, GCD Euclidean algorithm", ml: "Polynomial regression, feature engineering", os: "Check PR #1 status. Search for issue #2." },
-      { name: "Sun June 1", dsa: "Sieve of Eratosthenes. Practice prime problems on LeetCode.", ml: "Logistic regression: sigmoid, hypothesis, intuition", os: "Claim issue #2. Run briefing prompt." },
-      { name: "Mon June 2", dsa: "Recursion intro. Draw call stacks on paper. Factorial, print 1-N.", ml: "Decision boundary, cost function for logistic regression", os: "Rest. Extra DSA or ML revision slot." },
-      { name: "Tue June 3", dsa: "Fibonacci recursion. Understand stack overflow risk. Multiple calls.", ml: "Gradient descent for logistic regression, simplified cost", os: "Implement issue #2. Run test suite." },
-      { name: "Wed June 4", dsa: "power(x,n), reverse array via recursion, check palindrome recursively", ml: "Overfitting, underfitting, regularization intro", os: "Submit PR #2. Polish the description." },
-      { name: "Thu June 5", dsa: "Backtracking intro: generate all subsets of an array", ml: "Regularized linear & logistic regression. Week 2 quiz.", os: "Rest. Revision slot." },
-      { name: "Fri June 6", dsa: "Recursion revision: redo all problems blind, no notes", ml: "Course 1 Week 3 start: neural network motivation", os: "Handle PR feedback if maintainer replied. Otherwise rest." }
+      { name: "Sat May 31", dsa: "Digit extraction, palindromes, GCD Euclidean algorithm", ml: "Polynomial regression, feature engineering" },
+      { name: "Sun June 1", dsa: "Sieve of Eratosthenes. Practice prime problems on LeetCode.", ml: "Logistic regression: sigmoid, hypothesis, intuition" },
+      { name: "Mon June 2", dsa: "Recursion intro. Draw call stacks on paper. Factorial, print 1-N.", ml: "Decision boundary, cost function for logistic regression" },
+      { name: "Tue June 3", dsa: "Fibonacci recursion. Understand stack overflow risk. Multiple calls.", ml: "Gradient descent for logistic regression, simplified cost" },
+      { name: "Wed June 4", dsa: "power(x,n), reverse array via recursion, check palindrome recursively", ml: "Overfitting, underfitting, regularization intro" },
+      { name: "Thu June 5", dsa: "Backtracking intro: generate all subsets of an array", ml: "Regularized linear & logistic regression. Week 2 quiz." },
+      { name: "Fri June 6", dsa: "Recursion revision: redo all problems blind, no notes", ml: "Course 1 Week 3 start: neural network motivation" }
     ]
   },
 
@@ -464,8 +451,7 @@ const SCHEDULE_DATA = [
     phase: 1,
     tags: [
       { label: "DSA Unit 4", type: "dsa" },
-      { label: "ML Course 1 End", type: "ml" },
-      { label: "PR #3", type: "os" }
+      { label: "ML Course 1 End", type: "ml" }
     ],
     targets: {
       dsa: [
@@ -482,22 +468,16 @@ const SCHEDULE_DATA = [
         "Decision trees intro (Course 2 preview)",
         "Take Course 1 final quiz",
         "Start Course 2 Week 1"
-      ],
-      os: [
-        "3rd PR this week",
-        "Try an OpenCV or FastAPI repo now",
-        "Goal: understand every line of your PR",
-        "Start explaining fixes in plain English"
       ]
     },
     days: [
-      { name: "Sat June 7", dsa: "Array hashing, largest element, remove duplicates from sorted array", ml: "Neural network motivation, why not just logistic regression", os: "Find issue #3 in an OpenCV or FastAPI repo" },
-      { name: "Sun June 8", dsa: "Rotate array left/right. Two pointers: pair sum, container with water.", ml: "Neural network: layers, activations, forward propagation", os: "Briefing prompt for issue #3. Understand the codebase." },
-      { name: "Mon June 9", dsa: "Kadane's algorithm. Maximum product subarray.", ml: "TensorFlow basics in Course 1 assignment. Do not skip.", os: "Rest. Revision slot." },
-      { name: "Tue June 10", dsa: "Dutch national flag (3-pointer). Majority element Moore's voting algo.", ml: "Course 1 final assessment. Redo weak areas.", os: "Implement fix for issue #3. Test suite." },
-      { name: "Wed June 11", dsa: "2D Matrix: set matrix zeroes, spiral traversal", ml: "Course 2 Week 1 start: neural networks in depth, weights & biases", os: "Submit PR #3. Write clean description." },
-      { name: "Thu June 12", dsa: "Rotate matrix 90°. Hard: Pascal's triangle.", ml: "Activation functions: sigmoid, ReLU, why they matter", os: "Rest. Buffer for any PR feedback." },
-      { name: "Fri June 13", dsa: "Weekly array revision: redo 5 problems blind. No looking at solutions.", ml: "Multiclass classification, softmax. Week 1 quiz Course 2.", os: "Review and respond to any open PR comments." }
+      { name: "Sat June 7", dsa: "Array hashing, largest element, remove duplicates from sorted array", ml: "Neural network motivation, why not just logistic regression" },
+      { name: "Sun June 8", dsa: "Rotate array left/right. Two pointers: pair sum, container with water.", ml: "Neural network: layers, activations, forward propagation" },
+      { name: "Mon June 9", dsa: "Kadane's algorithm. Maximum product subarray.", ml: "TensorFlow basics in Course 1 assignment. Do not skip." },
+      { name: "Tue June 10", dsa: "Dutch national flag (3-pointer). Majority element Moore's voting algo.", ml: "Course 1 final assessment. Redo weak areas." },
+      { name: "Wed June 11", dsa: "2D Matrix: set matrix zeroes, spiral traversal", ml: "Course 2 Week 1 start: neural networks in depth, weights & biases" },
+      { name: "Thu June 12", dsa: "Rotate matrix 90°. Hard: Pascal's triangle.", ml: "Activation functions: sigmoid, ReLU, why they matter" },
+      { name: "Fri June 13", dsa: "Weekly array revision: redo 5 problems blind. No looking at solutions.", ml: "Multiclass classification, softmax. Week 1 quiz Course 2." }
     ]
   },
 
@@ -511,8 +491,7 @@ const SCHEDULE_DATA = [
     phase: 2,
     tags: [
       { label: "DSA Unit 5", type: "dsa" },
-      { label: "ML Course 2", type: "ml" },
-      { label: "PR #4–5", type: "os" }
+      { label: "ML Course 2", type: "ml" }
     ],
     targets: {
       dsa: [
@@ -529,22 +508,16 @@ const SCHEDULE_DATA = [
         "Bias vs variance tradeoff",
         "Regularization in NNs (L2, dropout)",
         "Course 2 Week 2 assignment"
-      ],
-      os: [
-        "Target 2 PRs this week",
-        "Pick slightly harder issues now",
-        "You should be faster at this by now",
-        "Can you explain each PR without AI?"
       ]
     },
     days: [
-      { name: "Sat June 14", dsa: "Binary search template. Implement from scratch. First/last occurrence.", ml: "Back-propagation: intuition, chain rule, don't fear the math", os: "Find issue #4. Briefing prompt." },
-      { name: "Sun June 15", dsa: "Rotated sorted array search. Count occurrences of element.", ml: "Train/dev/test splits, why we need a held-out set", os: "Implement PR #4." },
-      { name: "Mon June 16", dsa: "Binary search on answers: Koko bananas, minimum days to make bouquets", ml: "Bias vs variance, diagnosing high bias / high variance", os: "Rest. Revision slot." },
-      { name: "Tue June 17", dsa: "Aggressive cows, book allocation — classic binary search on answers", ml: "Regularization in NNs: L2, dropout. When to use what.", os: "Submit PR #4. Find and claim issue #5." },
-      { name: "Wed June 18", dsa: "2D matrix binary search. Median of row-wise sorted matrix.", ml: "Course 2 Week 2 assignment — do it fully, debug your own errors", os: "Implement PR #5. Run tests." },
-      { name: "Thu June 19", dsa: "Revision: redo 4 binary search problems blind", ml: "Optimization: mini-batch gradient descent, momentum", os: "Rest / PR feedback handling" },
-      { name: "Fri June 20", dsa: "LeetCode session: 3 binary search problems, timed (30 min each max)", ml: "Adam optimizer, learning rate decay. Week 2 quiz.", os: "Submit PR #5." }
+      { name: "Sat June 14", dsa: "Binary search template. Implement from scratch. First/last occurrence.", ml: "Back-propagation: intuition, chain rule, don't fear the math" },
+      { name: "Sun June 15", dsa: "Rotated sorted array search. Count occurrences of element.", ml: "Train/dev/test splits, why we need a held-out set" },
+      { name: "Mon June 16", dsa: "Binary search on answers: Koko bananas, minimum days to make bouquets", ml: "Bias vs variance, diagnosing high bias / high variance" },
+      { name: "Tue June 17", dsa: "Aggressive cows, book allocation — classic binary search on answers", ml: "Regularization in NNs: L2, dropout. When to use what." },
+      { name: "Wed June 18", dsa: "2D matrix binary search. Median of row-wise sorted matrix.", ml: "Course 2 Week 2 assignment — do it fully, debug your own errors" },
+      { name: "Thu June 19", dsa: "Revision: redo 4 binary search problems blind", ml: "Optimization: mini-batch gradient descent, momentum" },
+      { name: "Fri June 20", dsa: "LeetCode session: 3 binary search problems, timed (30 min each max)", ml: "Adam optimizer, learning rate decay. Week 2 quiz." }
     ]
   },
 
@@ -558,8 +531,7 @@ const SCHEDULE_DATA = [
     phase: 2,
     tags: [
       { label: "DSA Unit 6–7", type: "dsa" },
-      { label: "ML Course 2", type: "ml" },
-      { label: "PR #6", type: "os" }
+      { label: "ML Course 2", type: "ml" }
     ],
     targets: {
       dsa: [
@@ -576,22 +548,16 @@ const SCHEDULE_DATA = [
         "Random forests intuition",
         "XGBoost overview",
         "Course 2 Week 3 assignment"
-      ],
-      os: [
-        "1 PR this week (lighter week)",
-        "Focus on quality over quantity",
-        "Try to review someone else's PR too",
-        "This builds community reputation"
       ]
     },
     days: [
-      { name: "Sat June 21", dsa: "String basics: reverse words, anagram check, valid palindrome", ml: "Decision trees: entropy, information gain, how splits are chosen", os: "Find and claim issue #6" },
-      { name: "Sun June 22", dsa: "Longest palindromic substring. String to integer (atoi) with edge cases.", ml: "Random forests: bagging, why it reduces overfitting", os: "Implement PR #6. Briefing + implementation prompts." },
-      { name: "Mon June 23", dsa: "Linked list: implement from scratch, insert at head/tail/middle, delete", ml: "XGBoost: boosting intuition, why it often beats random forests", os: "Rest. Revision." },
-      { name: "Tue June 24", dsa: "Reverse linked list. Middle of list. Merge two sorted lists.", ml: "When to use decision trees vs NNs. Tabular vs image/text data.", os: "Submit PR #6. Review someone else's open PR in same repo." },
-      { name: "Wed June 25", dsa: "Floyd's tortoise & hare: detect cycle, find start of cycle", ml: "Course 2 Week 3 assignment. Full practice lab.", os: "Handle any PR feedback" },
-      { name: "Thu June 26", dsa: "Doubly linked list. Palindrome linked list check.", ml: "Course 2 final quiz + review. Start thinking about what Course 3 covers.", os: "Rest" },
-      { name: "Fri June 27", dsa: "Revision: strings + linked list. 4 problems blind, timed.", ml: "Course 2 complete ✓. Rest of day: reflect on what you now understand vs before.", os: "Look ahead: pick a repo you want to contribute to long-term" }
+      { name: "Sat June 21", dsa: "String basics: reverse words, anagram check, valid palindrome", ml: "Decision trees: entropy, information gain, how splits are chosen" },
+      { name: "Sun June 22", dsa: "Longest palindromic substring. String to integer (atoi) with edge cases.", ml: "Random forests: bagging, why it reduces overfitting" },
+      { name: "Mon June 23", dsa: "Linked list: implement from scratch, insert at head/tail/middle, delete", ml: "XGBoost: boosting intuition, why it often beats random forests" },
+      { name: "Tue June 24", dsa: "Reverse linked list. Middle of list. Merge two sorted lists.", ml: "When to use decision trees vs NNs. Tabular vs image/text data." },
+      { name: "Wed June 25", dsa: "Floyd's tortoise & hare: detect cycle, find start of cycle", ml: "Course 2 Week 3 assignment. Full practice lab." },
+      { name: "Thu June 26", dsa: "Doubly linked list. Palindrome linked list check.", ml: "Course 2 final quiz + review. Start thinking about what Course 3 covers." },
+      { name: "Fri June 27", dsa: "Revision: strings + linked list. 4 problems blind, timed.", ml: "Course 2 complete ✓. Rest of day: reflect on what you now understand vs before." }
     ]
   },
 
@@ -605,8 +571,7 @@ const SCHEDULE_DATA = [
     phase: 2,
     tags: [
       { label: "DSA Unit 8", type: "dsa" },
-      { label: "ML Wrap Up", type: "ml" },
-      { label: "PR #7", type: "os" }
+      { label: "ML Wrap Up", type: "ml" }
     ],
     targets: {
       dsa: [
@@ -623,23 +588,17 @@ const SCHEDULE_DATA = [
         "Revisit: what is YOLO actually doing now?",
         "Optional: start Course 3 Week 1",
         "Write a 1-page ML concept summary"
-      ],
-      os: [
-        "Final PR of the summer",
-        "Aim for something slightly complex",
-        "Write a LinkedIn post about your summer",
-        "Count: 7 PRs, 2 ML courses, Units 1–8 DSA"
       ]
     },
     days: [
-      { name: "Sat June 28", dsa: "Stack from scratch: array + LL implementations. Valid parentheses.", ml: "Consolidation: redo any Course 1 concept that still feels fuzzy", os: "Find final issue #7. Briefing prompt." },
-      { name: "Sun June 29", dsa: "Queue from scratch. Circular queue. Deque implementation.", ml: "Look back at your YOLO/YOLOv8s work: what do you understand now that you didn't before?", os: "Implement PR #7." },
-      { name: "Mon June 30", dsa: "Infix to postfix. Evaluate postfix expression.", ml: "Write a 1-page concept map: gradient descent → logistic → NN → trees", os: "Submit PR #7." },
-      { name: "Tue July 1", dsa: "Monotonic stack: next greater element, previous smaller element", ml: "Optional Course 3 Week 1: K-means clustering. Lightweight, no pressure.", os: "Rest. Handle PR feedback." },
-      { name: "Wed July 2", dsa: "Trapping rain water: brute → prefix max → O(N) two pointers", ml: "Revision / rest day for ML", os: "Draft LinkedIn post about your open source summer" },
-      { name: "Thu July 3", dsa: "Largest rectangle in histogram. Sliding window maximum (deque).", ml: "Free. Watch a 3Blue1Brown neural network video for fun.", os: "Rest" },
-      { name: "Fri July 4", dsa: "Final revision: pick hardest problems from Units 1–8. Test yourself.", ml: "Done ✓. Courses 1 & 2 complete. Celebrate that.", os: "Post on LinkedIn. Summer wrap. 7 PRs merged." },
-      { name: "Sat July 5", dsa: "Break day ✓", ml: "Break day ✓", os: "Break day ✓" }
+      { name: "Sat June 28", dsa: "Stack from scratch: array + LL implementations. Valid parentheses.", ml: "Consolidation: redo any Course 1 concept that still feels fuzzy" },
+      { name: "Sun June 29", dsa: "Queue from scratch. Circular queue. Deque implementation.", ml: "Look back at your YOLO/YOLOv8s work: what do you understand now that you didn't before?" },
+      { name: "Mon June 30", dsa: "Infix to postfix. Evaluate postfix expression.", ml: "Write a 1-page concept map: gradient descent → logistic → NN → trees" },
+      { name: "Tue July 1", dsa: "Monotonic stack: next greater element, previous smaller element", ml: "Optional Course 3 Week 1: K-means clustering. Lightweight, no pressure." },
+      { name: "Wed July 2", dsa: "Trapping rain water: brute → prefix max → O(N) two pointers", ml: "Revision / rest day for ML" },
+      { name: "Thu July 3", dsa: "Largest rectangle in histogram. Sliding window maximum (deque).", ml: "Free. Watch a 3Blue1Brown neural network video for fun." },
+      { name: "Fri July 4", dsa: "Final revision: pick hardest problems from Units 1–8. Test yourself.", ml: "Done ✓. Courses 1 & 2 complete. Celebrate that." },
+      { name: "Sat July 5", dsa: "Break day ✓", ml: "Break day ✓" }
     ]
   }
 ];
