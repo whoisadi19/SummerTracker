@@ -1327,17 +1327,27 @@ body::before {
    PREMIUM FEATURES (Pomodoro, Heatmap, XP, Resources, Pinger, Modal)
    ═══════════════════════════════════ */
 
-/* Dashboard Layout (Bento) */
-.bento-dashboard {
+/* Dashboard Layout (Focus) */
+.dash-focus-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: 2fr 1fr;
   gap: 24px;
 }
-.bento-greeting { grid-column: span 2; }
-.bento-stats { grid-column: span 1; display: flex; flex-direction: column; justify-content: center; }
-.bento-rings { grid-column: span 3; }
-.bento-today { grid-column: span 2; }
-.bento-side { grid-column: span 1; display: flex; flex-direction: column; gap: 24px; }
+.dash-main-col {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.dash-side-col {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.quick-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
 
 /* Pomodoro Widget */
 .pomodoro-widget {
@@ -1806,13 +1816,12 @@ body::before {
    RESPONSIVE
    ═══════════════════════════════════ */
 @media (max-width: 768px) {
-  .bento-dashboard { grid-template-columns: 1fr; }
+  .dash-focus-grid { grid-template-columns: 1fr; }
 
   .sidebar { display: none; }
   .mobile-nav { display: flex; }
   .main-content { margin-left: 0; padding-bottom: 80px; }
   .view-container { padding: 24px 16px 40px; }
-  .bento-greeting, .bento-stats, .bento-rings, .bento-today, .bento-side { grid-column: span 1; }
 
   .progress-rings { grid-template-columns: repeat(3, 1fr); gap: 8px; }
   .ring-card { padding: 16px 8px; }
