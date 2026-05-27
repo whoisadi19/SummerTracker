@@ -832,71 +832,150 @@ function handleDragEnd(e) {
   document.querySelectorAll('.cl-item').forEach(el => el.classList.remove('drag-over'));
 }
 
-// ── RESOURCES VIEW ──
-let resTab = 'dsa-roadmap';
-function switchResourceTab(tab) {
-  resTab = tab;
-  document.querySelectorAll('#view-resources .cl-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+// ── RESOURCES VIEW (CUSTOM MANAGER) ──
+let resFilter = 'all';
+
+const DEFAULT_RESOURCES = [
+  { id: 'default-1', title: "Striver's A2Z DSA Sheet", url: "https://takeuforward.org/strivers-a2z-dsa-course-sheet-2-0-your-path-to-coding-interview-ready/", desc: "The gold standard sheet for DSA tracking and practice.", category: "dsa" },
+  { id: 'default-2', title: "Andrew Ng Machine Learning Specialization", url: "https://www.coursera.org/specializations/machine-learning-introduction", desc: "Foundational machine learning concepts, linear regression, neural networks, decision trees.", category: "ml" },
+  { id: 'default-3', title: "LeetCode Practice Platform", url: "https://leetcode.com", desc: "Best place to code and practice algorithms with daily challenges.", category: "dsa" }
+];
+
+function getResources() {
+  if (!appState.customResources) {
+    appState.customResources = [...DEFAULT_RESOURCES];
+    saveState();
+  }
+  return appState.customResources;
+}
+
+function setResourceFilter(filter, el) {
+  resFilter = filter;
+  document.querySelectorAll('#resFilterChips .cl-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
   renderResources();
 }
 
 function renderResources() {
-  const c = document.getElementById('resContent');
-  if (resTab === 'dsa-roadmap') {
-    c.innerHTML = `
-      <div class="res-card">
-        <div class="res-card-title">C++ DSA Core Roadmap</div>
-        <div style="font-family:'Outfit',sans-serif; color:var(--text-muted); margin-bottom:16px;">
-          Your step-by-step path to algorithmic mastery. Click a step to copy its focus prompt.
-        </div>
-        <div class="res-step">
-           <div class="res-step-label">UNIT 1 · Syntax & Logic</div>
-           <div style="font-family:'Syne',sans-serif; font-size:16px; color:var(--text-primary);">C++ Basics, Data Types, Control Flow</div>
-           <div class="res-step-prompt">"Explain C++ memory management and references for a beginner with code examples."</div>
-           <button class="res-copy-btn" onclick="copyText('Explain C++ memory management and references for a beginner with code examples.')">📋 Copy Prompt</button>
-        </div>
-        <div class="res-step">
-           <div class="res-step-label">UNIT 2 · STL & Efficiency</div>
-           <div style="font-family:'Syne',sans-serif; font-size:16px; color:var(--text-primary);">C++ Standard Template Library (Vectors, Maps)</div>
-           <div class="res-step-prompt">"What are the time complexities of standard STL containers like std::map, std::unordered_map, and std::vector?"</div>
-           <button class="res-copy-btn" onclick="copyText('What are the time complexities of standard STL containers like std::map, std::unordered_map, and std::vector?')">📋 Copy Prompt</button>
-        </div>
-        <div class="res-step">
-           <div class="res-step-label">UNIT 3 · Algorithmic Paradigms</div>
-           <div style="font-family:'Syne',sans-serif; font-size:16px; color:var(--text-primary);">Recursion & Backtracking Foundation</div>
-           <div class="res-step-prompt">"Teach me how to convert an iterative solution to a recursive one in C++, using a tree analogy."</div>
-           <button class="res-copy-btn" onclick="copyText('Teach me how to convert an iterative solution to a recursive one in C++, using a tree analogy.')">📋 Copy Prompt</button>
-        </div>
-      </div>
-    `;
-  } else {
-    c.innerHTML = `
-      <div class="res-card">
-        <div class="res-card-title">Open Source PR Playbook</div>
-        <div style="font-family:'Outfit',sans-serif; color:var(--text-muted); margin-bottom:16px;">
-          5-Step Guide to Landing Your First Merged PR
-        </div>
-        <div class="res-step">
-           <div class="res-step-label">STEP 1 · Discovery</div>
-           <div style="font-family:'Syne',sans-serif; font-size:16px; color:var(--text-primary);">Find good first issues on GitHub</div>
-           <div class="res-step-prompt">"Find me active open source C++ or Python repositories with 'good first issue' tags."</div>
-           <button class="res-copy-btn" onclick="copyText('Find me active open source C++ or Python repositories with good first issue tags.')">📋 Copy Prompt</button>
-        </div>
-        <div class="res-step">
-           <div class="res-step-label">STEP 2 · Environment</div>
-           <div style="font-family:'Syne',sans-serif; font-size:16px; color:var(--text-primary);">Fork, Clone, and Build</div>
-           <div class="res-step-prompt">"git clone [URL]\ncd [repo]\nmkdir build && cd build\ncmake .. && make"</div>
-           <button class="res-copy-btn" onclick="copyText('git clone [URL]\\ncd [repo]\\nmkdir build && cd build\\ncmake .. && make')">📋 Copy Prompt</button>
-        </div>
-        <div class="res-step">
-           <div class="res-step-label">STEP 3 · Implementation</div>
-           <div style="font-family:'Syne',sans-serif; font-size:16px; color:var(--text-primary);">Write clean, conforming code</div>
-           <div class="res-step-prompt">"Review my C++ code snippet against standard LLVM style guidelines before I submit."</div>
-           <button class="res-copy-btn" onclick="copyText('Review my C++ code snippet against standard LLVM style guidelines before I submit.')">📋 Copy Prompt</button>
-        </div>
-      </div>
-    `;
+  const container = document.getElementById('resContent');
+  if (!container) return;
+  const items = getResources();
+  
+  const filtered = items.filter(r => resFilter === 'all' || r.category === resFilter);
+  
+  if (filtered.length === 0) {
+    container.innerHTML = `<div style="grid-column: 1/-1; padding:40px; text-align:center; color:var(--text-muted);">No study resources found in this category. Click "+ Add Resource" to make one!</div>`;
+    return;
   }
+  
+  container.innerHTML = filtered.map(item => `
+    <div class="res-item-card">
+      <span class="res-item-cat">${item.category}</span>
+      <h3 class="res-item-title">${item.title}</h3>
+      <p class="res-item-desc">${item.desc || 'No description provided.'}</p>
+      <div class="res-item-footer">
+        <a href="${item.url}" target="_blank" class="res-link-btn">
+          <span>Open Resource</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
+        </a>
+        <div class="res-actions">
+          <button class="cl-action-btn" onclick="editResource('${item.id}', event)" title="Edit">✎</button>
+          <button class="cl-action-btn" onclick="deleteResource('${item.id}', event)" title="Delete" style="color:#ef4444;">✕</button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function openResourceModal(resource = null) {
+  const modal = document.getElementById('resourceModal');
+  const title = document.getElementById('resourceModalTitle');
+  const idInput = document.getElementById('resourceId');
+  const titleInput = document.getElementById('resTitle');
+  const urlInput = document.getElementById('resUrl');
+  const descText = document.getElementById('resDesc');
+  const catSel = document.getElementById('resCategory');
+
+  if (resource) {
+    title.textContent = "Edit Study Resource";
+    idInput.value = resource.id;
+    titleInput.value = resource.title;
+    urlInput.value = resource.url;
+    descText.value = resource.desc || '';
+    catSel.value = resource.category;
+  } else {
+    title.textContent = "Add Study Resource";
+    idInput.value = '';
+    titleInput.value = '';
+    urlInput.value = '';
+    descText.value = '';
+    catSel.value = 'dsa';
+  }
+
+  modal.classList.add('open');
+  titleInput.focus();
+}
+
+function closeResourceModal(e, force = false) {
+  if (force || (e && e.target.id === 'resourceModal')) {
+    document.getElementById('resourceModal').classList.remove('open');
+  }
+}
+
+function handleResourceSubmit(e) {
+  e.preventDefault();
+  const id = document.getElementById('resourceId').value;
+  const title = document.getElementById('resTitle').value.trim();
+  const url = document.getElementById('resUrl').value.trim();
+  const desc = document.getElementById('resDesc').value.trim();
+  const category = document.getElementById('resCategory').value;
+
+  const items = getResources();
+
+  if (id) {
+    // Edit existing
+    const item = items.find(r => r.id === id);
+    if (item) {
+      item.title = title;
+      item.url = url;
+      item.desc = desc;
+      item.category = category;
+    }
+    showToast('Resource updated!');
+  } else {
+    // Add new
+    const newItem = {
+      id: 'res-' + Date.now(),
+      title,
+      url,
+      desc,
+      category
+    };
+    items.push(newItem);
+    showToast('Resource added!');
+  }
+
+  saveState();
+  closeResourceModal(null, true);
+  renderResources();
+}
+
+function editResource(id, e) {
+  e.stopPropagation();
+  const items = getResources();
+  const item = items.find(r => r.id === id);
+  if (item) {
+    openResourceModal(item);
+  }
+}
+
+function deleteResource(id, e) {
+  e.stopPropagation();
+  if (!confirm('Are you sure you want to delete this resource?')) return;
+  appState.customResources = getResources().filter(r => r.id !== id);
+  saveState();
+  renderResources();
+  showToast('Resource deleted!');
 }
 
 function copyText(txt) {

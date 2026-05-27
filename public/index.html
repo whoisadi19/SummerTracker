@@ -330,25 +330,31 @@
       </div>
     </section>
 
-    <!-- ─── RESOURCES VIEW (NEW) ─── -->
+    <!-- ─── RESOURCES VIEW ─── -->
     <section class="view" id="view-resources">
       <div class="view-container">
-        <div class="view-header">
+        <div class="view-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;">
           <div>
-            <div class="view-eyebrow">INTERACTIVE GUIDES</div>
+            <div class="view-eyebrow">KNOWLEDGE HUB</div>
             <h1 class="view-title">Study <span class="c-rev">Resources</span></h1>
           </div>
-          <div class="schedule-meta">
-            <span>Built from your custom docx files</span>
+          <div>
+            <button class="res-btn primary" onclick="openResourceModal()">+ Add Resource</button>
           </div>
         </div>
 
-        <div class="cl-tabs">
-          <button class="cl-tab active" data-tab="dsa-roadmap" onclick="switchResourceTab('dsa-roadmap')">C++ DSA Roadmap</button>
+        <!-- Filter tabs for categories -->
+        <div class="cl-filters" style="margin-top:20px;">
+          <div class="cl-chips" id="resFilterChips">
+            <button class="cl-chip active" onclick="setResourceFilter('all', this)">All</button>
+            <button class="cl-chip" onclick="setResourceFilter('dsa', this)">DSA</button>
+            <button class="cl-chip" onclick="setResourceFilter('ml', this)">Machine Learning</option>
+            <button class="cl-chip" onclick="setResourceFilter('other', this)">Other</button>
+          </div>
         </div>
 
-        <div class="res-content" id="resContent">
-          <!-- Populated by app.js from the extracted files logic -->
+        <div class="res-grid" id="resContent">
+          <!-- Populated dynamically by app.js -->
         </div>
 
       </div>
@@ -420,19 +426,59 @@
     </div>
   </div>
 
-  <!-- Reset Modal -->
-  <div class="modal-overlay" id="resetModal" onclick="closeResetModal(event)">
+
+   <!-- Reset Modal -->
+   <div class="modal-overlay" id="resetModal" onclick="closeResetModal(event)">
+     <div class="modal auth-modal">
+       <div class="modal-header">
+         <h2 class="modal-title" style="color: var(--accent-dsa)">⚠️ Reset Progress?</h2>
+         <button class="modal-close" onclick="closeResetModal(null, true)">✕</button>
+       </div>
+       <div class="modal-body" style="padding: 20px;">
+         <p style="color: var(--text-secondary); margin-bottom: 20px; line-height: 1.5;">Are you sure you want to reset all your progress? This action cannot be undone and will wipe your local data.</p>
+         <div style="display: flex; gap: 10px; justify-content: flex-end;">
+           <button class="modal-btn secondary" onclick="closeResetModal(null, true)">Cancel</button>
+           <button class="modal-btn primary" style="background: var(--accent-dsa);" onclick="confirmResetAll()">Reset All</button>
+         </div>
+       </div>
+     </div>
+   </div>
+
+  <!-- Resource Modal -->
+  <div class="modal-overlay" id="resourceModal" onclick="closeResourceModal(event)">
     <div class="modal auth-modal">
       <div class="modal-header">
-        <h2 class="modal-title" style="color: var(--accent-dsa)">⚠️ Reset Progress?</h2>
-        <button class="modal-close" onclick="closeResetModal(null, true)">✕</button>
+        <h2 class="modal-title" id="resourceModalTitle">Add Study Resource</h2>
+        <button class="modal-close" onclick="closeResourceModal(null, true)">✕</button>
       </div>
       <div class="modal-body" style="padding: 20px;">
-        <p style="color: var(--text-secondary); margin-bottom: 20px; line-height: 1.5;">Are you sure you want to reset all your progress? This action cannot be undone and will wipe your local data.</p>
-        <div style="display: flex; gap: 10px; justify-content: flex-end;">
-          <button class="modal-btn secondary" onclick="closeResetModal(null, true)">Cancel</button>
-          <button class="modal-btn primary" style="background: var(--accent-dsa);" onclick="confirmResetAll()">Reset All</button>
-        </div>
+        <form id="resourceForm" onsubmit="handleResourceSubmit(event)">
+          <input type="hidden" id="resourceId">
+          <div class="form-group">
+            <label class="form-label" for="resTitle">Resource Title</label>
+            <input type="text" id="resTitle" class="form-input" placeholder="e.g. Striver's A2Z Sheet" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="resUrl">Resource URL / Link</label>
+            <input type="url" id="resUrl" class="form-input" placeholder="e.g. https://takeuforward.org" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="resDesc">Description (Optional)</label>
+            <textarea id="resDesc" class="form-input" rows="3" placeholder="Brief note about the resource..." style="resize:none; font-family:inherit;"></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="resCategory">Category</label>
+            <select id="resCategory" class="form-input" style="background: var(--bg-surface-2); font-family: inherit;">
+              <option value="dsa">DSA</option>
+              <option value="ml">Machine Learning</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+            <button type="button" class="modal-btn secondary" onclick="closeResourceModal(null, true)">Cancel</button>
+            <button type="submit" class="modal-btn primary" style="background: var(--accent-rev);">Save Resource</button>
+          </div>
+        </form>
       </div>
     </div>
   </div>
