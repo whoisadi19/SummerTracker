@@ -383,24 +383,68 @@ body::before {
 }
 
 /* Color indicator tabs on cards using modern styling */
-.today-card:has(.today-dot.dsa) {
+.today-card:has(.today-checkbox.dsa) {
   border-left: 4px solid var(--accent-dsa);
 }
-.today-card:has(.today-dot.ml) {
+.today-card:has(.today-checkbox.ml) {
   border-left: 4px solid var(--accent-ml);
 }
 
-.today-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  margin-top: 5px;
+.today-checkbox {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  border: 2px solid var(--border-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
   flex-shrink: 0;
-  box-shadow: 0 0 8px currentColor;
+  margin-top: 2px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  background: transparent;
 }
 
-.today-dot.dsa { background: var(--accent-dsa); color: var(--accent-dsa); }
-.today-dot.ml { background: var(--accent-ml); color: var(--accent-ml); }
+.today-checkbox.dsa:hover, .today-checkbox.dsa.checked {
+  border-color: var(--accent-dsa);
+  background: rgba(224, 108, 83, 0.1);
+}
+
+.today-checkbox.ml:hover, .today-checkbox.ml.checked {
+  border-color: var(--accent-ml);
+  background: rgba(82, 143, 196, 0.1);
+}
+
+.today-checkbox.checked.dsa {
+  background: var(--accent-dsa) !important;
+  border-color: var(--accent-dsa) !important;
+}
+
+.today-checkbox.checked.ml {
+  background: var(--accent-ml) !important;
+  border-color: var(--accent-ml) !important;
+}
+
+.today-checkmark {
+  font-size: 11px;
+  font-weight: 900;
+  color: var(--bg-primary);
+  visibility: hidden;
+  transition: transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+[data-theme="cyber"] .today-checkmark {
+  color: var(--bg-primary);
+}
+
+[data-theme="journal"] .today-checkmark {
+  color: #fff;
+}
+
+.today-checkbox.checked .today-checkmark {
+  visibility: visible;
+  transform: scale(1);
+}
 
 .today-card-label {
   font-family: 'JetBrains Mono', monospace;
@@ -419,6 +463,19 @@ body::before {
   color: var(--text-secondary);
   line-height: 1.5;
   font-weight: 450;
+  transition: all 0.2s ease;
+}
+
+.today-card.done {
+  border-color: var(--border) !important;
+  box-shadow: none !important;
+  transform: none !important;
+  cursor: default;
+}
+
+.today-card.done .today-card-text {
+  text-decoration: line-through;
+  opacity: 0.4;
 }
 
 .today-empty {

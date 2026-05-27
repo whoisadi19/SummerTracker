@@ -381,6 +381,61 @@ function updatePomodoroUI() {
 }
 
 // ── RENDER: DASHBOARD ──
+// ── HELPER: GET NEXT UNCHECKED TASK ──
+function getNextUncheckedTask(subject) {
+  const data = getChecklistData();
+  if (!data || !data[subject]) return null;
+  
+  for (const weekData of data[subject]) {
+    for (const unit of weekData.units) {
+      for (const item of unit.items) {
+        if (!appState.completed[item.id]) {
+          return {
+            item: item,
+            weekNum: weekData.week,
+            unitTitle: unit.title
+          };
+        }
+      }
+    }
+  }
+  return null;
+}
+
+// ── ACTION: TOGGLE DASHBOARD ITEM ──
+function toggleDashboardItem(id, el, weekNum, subject) {
+  const isDone = !appState.completed[id];
+  appState.completed[id] = isDone || undefined;
+  if (!isDone) delete appState.completed[id];
+
+  if (isDone) updateStreakAndHeatmap();
+
+  saveState();
+  
+  // Instantly apply visual ticked off styles
+  el.classList.toggle('done', isDone);
+  const checkbox = el.querySelector('.today-checkbox');
+  if (checkbox) checkbox.classList.toggle('checked', isDone);
+  
+  // Sync other views in real time
+  updateChecklistProgress();
+  if (typeof renderChecklist === 'function' && document.getElementById('view-checklist').classList.contains('active')) {
+    renderChecklist();
+  }
+
+  // Check week completion for confetti
+  const wp = getWeekProgress(subject, weekNum);
+  if (isDone && wp.done === wp.total) {
+    shootConfetti();
+    showToast(`Week ${weekNum} Complete! Incredible! 🎉`);
+  }
+
+  // Wait a short moment so they see the checkbox tick off before shifting next item in
+  setTimeout(() => {
+    renderDashboard();
+  }, 800);
+}
+
 function renderDashboard() {
   const info = getTodayInfo();
   const progress = getProgress();
@@ -410,32 +465,56 @@ function renderDashboard() {
   const todayDateEl = document.getElementById('todayDate');
   todayDateEl.textContent = formatDate(new Date());
 
-  let weekIndex = info.weekIndex;
-  let dayInWeek = ((info.dayIndex % 7) + 7) % 7;
-  let isPreview = false;
+  const nextDsa = getNextUncheckedTask('dsa');
+  const nextMl = getNextUncheckedTask('ml');
 
-  if (info.isFuture) {
-    weekIndex = 0;
-    dayInWeek = 0; // Show Week 1 Day 1 as preview
-    isPreview = true;
-  }
-
-  if (typeof SCHEDULE_DATA !== 'undefined' && (info.isActive || isPreview) && weekIndex < SCHEDULE_DATA.length && weekIndex >= 0) {
-    const week = SCHEDULE_DATA[weekIndex];
-    if (week.days && week.days[dayInWeek]) {
-      const day = week.days[dayInWeek];
-      todayCards.innerHTML = `
-        ${isPreview ? `<div class="preview-badge" style="grid-column: 1 / -1; background: rgba(0, 229, 255, 0.1); border: 1px dashed var(--accent-dsa); color: var(--accent-dsa); padding: 8px 12px; border-radius: 8px; font-family: 'Outfit', sans-serif; font-size: 13px; text-align: center; margin-bottom: 8px;">⏳ Plan starts soon! Showing Day 1 Preview:</div>` : ''}
-        <div class="today-card"><div class="today-dot dsa"></div><div><div class="today-card-label dsa">DSA</div><div class="today-card-text">${day.dsa}</div></div></div>
-        <div class="today-card"><div class="today-dot ml"></div><div><div class="today-card-label ml">ML</div><div class="today-card-text">${day.ml}</div></div></div>
-        
-      `;
-    } else {
-      todayCards.innerHTML = `<div class="today-empty">📋 No specific tasks for today</div>`;
-    }
+  let dsaHtml = '';
+  if (nextDsa) {
+    dsaHtml = `
+      <div class="today-card" onclick="toggleDashboardItem('${nextDsa.item.id}', this, ${nextDsa.weekNum}, 'dsa')">
+        <div class="today-checkbox dsa"><span class="today-checkmark">✓</span></div>
+        <div>
+          <div class="today-card-label dsa">DSA · Week ${nextDsa.weekNum} · ${nextDsa.unitTitle.split(' — ')[1] || nextDsa.unitTitle}</div>
+          <div class="today-card-text">${nextDsa.item.text}</div>
+        </div>
+      </div>
+    `;
   } else {
-    todayCards.innerHTML = `<div class="today-empty">🚀 Keep up the momentum!</div>`;
+    dsaHtml = `
+      <div class="today-card done">
+        <div class="today-checkbox checked dsa"><span class="today-checkmark">✓</span></div>
+        <div>
+          <div class="today-card-label dsa">DSA Complete</div>
+          <div class="today-card-text">All DSA checklist items are fully completed! 🏆</div>
+        </div>
+      </div>
+    `;
   }
+
+  let mlHtml = '';
+  if (nextMl) {
+    mlHtml = `
+      <div class="today-card" onclick="toggleDashboardItem('${nextMl.item.id}', this, ${nextMl.weekNum}, 'ml')">
+        <div class="today-checkbox ml"><span class="today-checkmark">✓</span></div>
+        <div>
+          <div class="today-card-label ml">ML · Week ${nextMl.weekNum} · ${nextMl.unitTitle.split(' — ')[1] || nextMl.unitTitle}</div>
+          <div class="today-card-text">${nextMl.item.text}</div>
+        </div>
+      </div>
+    `;
+  } else {
+    mlHtml = `
+      <div class="today-card done">
+        <div class="today-checkbox checked ml"><span class="today-checkmark">✓</span></div>
+        <div>
+          <div class="today-card-label ml">ML Complete</div>
+          <div class="today-card-text">All ML checklist items are fully completed! 🏆</div>
+        </div>
+      </div>
+    `;
+  }
+
+  todayCards.innerHTML = dsaHtml + mlHtml;
 
   document.getElementById('statDsaDone').textContent = progress.dsa.done;
   document.getElementById('statMlDone').textContent = progress.ml.done;
@@ -714,6 +793,9 @@ function toggleItem(id, el, weekNum) {
   saveState();
   el.classList.toggle('done', isDone);
   updateChecklistProgress();
+
+  // Sync the dashboard view
+  if (typeof renderDashboard === 'function') renderDashboard();
 
   // Check week completion for confetti
   const wp = getWeekProgress(currentChecklistTab, weekNum);
