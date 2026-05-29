@@ -419,10 +419,15 @@
               <div class="pomo-time" id="pomoTime" style="font-size: 38px; font-weight: 800;">25:00</div>
             </div>
 
-            <!-- Control Buttons -->
-            <div class="pomo-controls" style="gap: 16px;">
-              <button class="pomo-btn" id="pomoPlayBtn" onclick="togglePomodoro()"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none" id="pomoPlayIcon"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg></button>
-              <button class="pomo-btn reset" onclick="resetPomodoro()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></button>
+            <!-- Control Buttons & Focus Mode Trigger -->
+            <div style="display:flex; flex-direction:column; align-items:center; gap: 20px; width: 100%;">
+              <div class="pomo-controls" style="gap: 16px; margin-bottom: 0;">
+                <button class="pomo-btn" id="pomoPlayBtn" onclick="togglePomodoro()"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none" id="pomoPlayIcon"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg></button>
+                <button class="pomo-btn reset" onclick="resetPomodoro()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></button>
+              </div>
+              <button class="focus-mode-trigger" onclick="enterFocusMode()">
+                <span class="focus-trigger-icon">🎯</span> Enter Focus Mode
+              </button>
             </div>
           </div>
 
@@ -636,6 +641,39 @@
             <button type="submit" class="modal-btn primary" style="background: var(--accent-rev);">Save Resource</button>
           </div>
         </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── FULL-SCREEN FOCUS OVERLAY ─── -->
+  <div class="focus-overlay" id="focusOverlay">
+    <!-- Exit button -->
+    <button class="exit-focus-btn" onclick="exitFocusMode()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+    </button>
+
+    <div class="focus-overlay-content">
+      <div class="focus-eyebrow">Ambient Focus Mode</div>
+      <div class="focus-subject-badge dsa" id="focusSubjectDisplay">DSA</div>
+      <div class="focus-task-title" id="focusTaskTitle">Current active task goes here...</div>
+
+      <!-- Pulsing Timer Circle -->
+      <div class="focus-timer-container">
+        <svg class="focus-svg" viewBox="0 0 200 200">
+          <circle class="focus-ring-bg" cx="100" cy="100" r="90" />
+          <circle class="focus-ring-fill" cx="100" cy="100" r="90" id="focusRing" />
+        </svg>
+        <div class="focus-time-display" id="focusTime">25:00</div>
+      </div>
+
+      <!-- Ambient Play/Pause Reset Controls -->
+      <div class="focus-controls">
+        <button class="focus-btn-play" onclick="togglePomodoro()">
+          <svg viewBox="0 0 24 24" fill="currentColor" id="focusPlayIcon"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+        </button>
+        <button class="focus-btn-reset" onclick="resetPomodoro()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
+        </button>
       </div>
     </div>
   </div>

@@ -325,10 +325,14 @@ let pomoMode = 'work';
 
 function togglePomodoro() {
   const icon = document.getElementById('pomoPlayIcon');
+  const focusIcon = document.getElementById('focusPlayIcon');
+  
   if (pomoTimer) {
     clearInterval(pomoTimer);
     pomoTimer = null;
-    icon.innerHTML = '<polygon points="5 3 19 12 5 21 5 3"></polygon>';
+    const playSvg = '<polygon points="5 3 19 12 5 21 5 3"></polygon>';
+    if (icon) icon.innerHTML = playSvg;
+    if (focusIcon) focusIcon.innerHTML = playSvg;
   } else {
     pomoTimer = setInterval(() => {
       pomoTimeLeft--;
@@ -342,20 +346,32 @@ function togglePomodoro() {
           logStudySession(pomoActiveSubject, 25 * 60);
           saveState();
         }
-        icon.innerHTML = '<polygon points="5 3 19 12 5 21 5 3"></polygon>';
+        const playSvg = '<polygon points="5 3 19 12 5 21 5 3"></polygon>';
+        if (icon) icon.innerHTML = playSvg;
+        if (focusIcon) focusIcon.innerHTML = playSvg;
         renderDashboard(); // Update XP
+        exitFocusMode(); // Dismiss focus mode overlay upon completion
       }
-      // updatePomodoroUI(); (handled in Pomodoro tab)
+      updatePomodoroUI(); // Keep clock counting down dynamically on screens!
     }, 1000);
-    icon.innerHTML = '<rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect>';
+    
+    const pauseSvg = '<rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect>';
+    if (icon) icon.innerHTML = pauseSvg;
+    if (focusIcon) focusIcon.innerHTML = pauseSvg;
   }
 }
 
 function resetPomodoro() {
   if (pomoTimer) { clearInterval(pomoTimer); pomoTimer = null; }
-  document.getElementById('pomoPlayIcon').innerHTML = '<polygon points="5 3 19 12 5 21 5 3"></polygon>';
+  
+  const playSvg = '<polygon points="5 3 19 12 5 21 5 3"></polygon>';
+  const icon = document.getElementById('pomoPlayIcon');
+  const focusIcon = document.getElementById('focusPlayIcon');
+  if (icon) icon.innerHTML = playSvg;
+  if (focusIcon) focusIcon.innerHTML = playSvg;
+  
   pomoTimeLeft = pomoMode === 'work' ? 25 * 60 : 5 * 60;
-  // updatePomodoroUI(); (handled in Pomodoro tab)
+  updatePomodoroUI();
 }
 
 function setPomodoroMode(m, btn) {
@@ -368,16 +384,79 @@ function setPomodoroMode(m, btn) {
 function updatePomodoroUI() {
   const m = Math.floor(pomoTimeLeft / 60);
   const s = pomoTimeLeft % 60;
+  const timeStr = `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+  
+  // Standard UI
   const timeEl = document.getElementById('pomoTime');
-  if(timeEl) timeEl.textContent = `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+  if(timeEl) timeEl.textContent = timeStr;
   
   const total = pomoMode === 'work' ? 25 * 60 : 5 * 60;
   const pct = ((total - pomoTimeLeft) / total) * 100;
+  
   const ring = document.getElementById('pomoRing');
   if(ring) {
     const circumference = 2 * Math.PI * 90;
     ring.style.strokeDashoffset = circumference - (pct / 100) * circumference;
   }
+  
+  // Focus Mode Overlay UI
+  const focusTimeEl = document.getElementById('focusTime');
+  if(focusTimeEl) focusTimeEl.textContent = timeStr;
+  
+  const focusRing = document.getElementById('focusRing');
+  if(focusRing) {
+    const circumference = 2 * Math.PI * 90;
+    focusRing.style.strokeDashoffset = circumference - (pct / 100) * circumference;
+  }
+}
+
+// ── ACTION: ENTER FOCUS MODE ──
+function enterFocusMode() {
+  const overlay = document.getElementById('focusOverlay');
+  if (!overlay) return;
+
+  const nextDsa = getNextUncheckedTask('dsa');
+  const nextMl = getNextUncheckedTask('ml');
+  
+  const taskTitleEl = document.getElementById('focusTaskTitle');
+  const subjectDisplayEl = document.getElementById('focusSubjectDisplay');
+  
+  if (subjectDisplayEl) {
+    subjectDisplayEl.textContent = pomoActiveSubject;
+    subjectDisplayEl.className = `focus-subject-badge ${pomoActiveSubject.toLowerCase()}`;
+  }
+
+  if (taskTitleEl) {
+    if (pomoActiveSubject.toLowerCase() === 'dsa' && nextDsa) {
+      taskTitleEl.textContent = nextDsa.item.text;
+    } else if (pomoActiveSubject.toLowerCase() === 'ml' && nextMl) {
+      taskTitleEl.textContent = nextMl.item.text;
+    } else {
+      // Fallback or custom subjects
+      const activeTask = getNextUncheckedTask('dsa') || getNextUncheckedTask('ml');
+      if (activeTask) {
+        taskTitleEl.textContent = activeTask.item.text;
+      } else {
+        taskTitleEl.textContent = `Focusing on ${pomoActiveSubject} studies`;
+      }
+    }
+  }
+
+  // Display Focus Mode Overlay
+  overlay.classList.add('active');
+  document.body.style.overflow = 'hidden'; // Lock page scroll
+  
+  // Keep values updated immediately
+  updatePomodoroUI();
+}
+
+// ── ACTION: EXIT FOCUS MODE ──
+function exitFocusMode() {
+  const overlay = document.getElementById('focusOverlay');
+  if (!overlay) return;
+  
+  overlay.classList.remove('active');
+  document.body.style.overflow = ''; // Unlock page scroll
 }
 
 // ── RENDER: DASHBOARD ──

@@ -2276,9 +2276,274 @@ body::before {
 .res-btn.secondary:hover { background: var(--bg-hover); color: var(--text-primary); }
 
 
-/* -- MOBILE RESPONSIVENESS FOR NEW VIEWS -- */
 @media (max-width: 768px) {
   .pomo-grid-layout { grid-template-columns: 1fr !important; }
   .insights-grid { grid-template-columns: 1fr !important; }
+}
+
+/* -- FULL-SCREEN FOCUS OVERLAY STYLES -- */
+.focus-mode-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: var(--bg-surface-2);
+  border: 1px solid var(--border-2);
+  border-radius: 99px;
+  color: var(--text-secondary);
+  font-family: 'Outfit', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.focus-mode-trigger:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent-dsa);
+  color: var(--text-primary);
+  box-shadow: var(--shadow);
+}
+
+.focus-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--bg-glass);
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.focus-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.exit-focus-btn {
+  position: absolute;
+  top: 32px;
+  right: 32px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.exit-focus-btn:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+  transform: rotate(90deg);
+}
+
+.exit-focus-btn svg {
+  width: 24px;
+  height: 24px;
+}
+
+.focus-overlay-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 24px;
+  width: 100%;
+  max-width: 640px;
+  padding: 32px;
+  animation: focusContentSlideUp 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes focusContentSlideUp {
+  0% { transform: translateY(30px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+.focus-eyebrow {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.focus-task-title {
+  font-family: 'Syne', sans-serif;
+  font-size: clamp(1.8rem, 5vw, 2.6rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  color: var(--text-primary);
+  max-width: 100%;
+  word-wrap: break-word;
+}
+
+.focus-subject-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 6px 16px;
+  border-radius: 99px;
+}
+
+.focus-subject-badge.dsa {
+  background: rgba(224, 108, 83, 0.1);
+  color: var(--accent-dsa);
+  border: 1px solid rgba(224, 108, 83, 0.2);
+}
+
+.focus-subject-badge.ml {
+  background: rgba(82, 143, 196, 0.1);
+  color: var(--accent-ml);
+  border: 1px solid rgba(82, 143, 196, 0.2);
+}
+
+.focus-subject-badge.general {
+  background: rgba(157, 128, 222, 0.1);
+  color: var(--accent-rev);
+  border: 1px solid rgba(157, 128, 222, 0.2);
+}
+
+.focus-timer-container {
+  position: relative;
+  width: 260px;
+  height: 260px;
+  margin: 12px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.focus-svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+  position: absolute;
+  inset: 0;
+}
+
+.focus-ring-bg {
+  fill: none;
+  stroke: var(--ring-bg);
+  stroke-width: 5;
+}
+
+.focus-ring-fill {
+  fill: none;
+  stroke: var(--accent-dsa);
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-dasharray: 565.48;
+  stroke-dashoffset: 0;
+  transition: stroke-dashoffset 1s linear;
+}
+
+.focus-subject-badge.ml ~ .focus-timer-container .focus-ring-fill {
+  stroke: var(--accent-ml);
+}
+
+.focus-subject-badge.general ~ .focus-timer-container .focus-ring-fill {
+  stroke: var(--accent-rev);
+}
+
+.focus-time-display {
+  font-family: 'Syne', sans-serif;
+  font-size: 3.8rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1;
+  z-index: 2;
+  letter-spacing: -0.02em;
+}
+
+/* Pulsing breathe effect when timer is active */
+.focus-overlay.active:has(#focusPlayIcon rect) .focus-timer-container {
+  animation: timerBreathe 4s ease-in-out infinite alternate;
+}
+
+@keyframes timerBreathe {
+  0% { transform: scale(1); filter: drop-shadow(0 0 0px transparent); }
+  100% { transform: scale(1.03); filter: drop-shadow(0 0 15px rgba(224, 108, 83, 0.15)); }
+}
+
+.focus-overlay.active:has(.focus-subject-badge.ml) .focus-timer-container {
+  animation-name: timerBreatheML;
+}
+
+@keyframes timerBreatheML {
+  0% { transform: scale(1); filter: drop-shadow(0 0 0px transparent); }
+  100% { transform: scale(1.03); filter: drop-shadow(0 0 15px rgba(82, 143, 196, 0.15)); }
+}
+
+.focus-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.focus-btn-play {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: none;
+  background: var(--text-primary);
+  color: var(--bg-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+}
+
+.focus-btn-play:hover {
+  transform: scale(1.08);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+}
+
+.focus-btn-play svg {
+  width: 24px;
+  height: 24px;
+}
+
+.focus-btn-reset {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--bg-surface-2);
+  border: 1px solid var(--border-2);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.focus-btn-reset:hover {
+  transform: scale(1.05);
+  color: var(--text-primary);
+  border-color: var(--border);
+  background: var(--bg-hover);
+}
+
+.focus-btn-reset svg {
+  width: 20px;
+  height: 20px;
 }
 
