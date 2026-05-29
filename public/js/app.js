@@ -281,7 +281,9 @@ function setRingProgress(id, pct) {
 // ── CONFETTI ──
 function shootConfetti() {
   const canvas = document.getElementById('confettiCanvas');
+  if (!canvas) return;
   const ctx = canvas.getContext('2d');
+  if (!ctx) return;
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
   
@@ -423,7 +425,7 @@ function enterFocusMode() {
   
   if (subjectDisplayEl) {
     subjectDisplayEl.textContent = pomoActiveSubject;
-    subjectDisplayEl.className = `focus-subject-badge ${pomoActiveSubject.toLowerCase()}`;
+    subjectDisplayEl.className = `focus-subject-badge ${pomoActiveSubject.toLowerCase().replace(/\s+/g, '-')}`;
   }
 
   if (taskTitleEl) {
@@ -483,6 +485,9 @@ function getNextUncheckedTask(subject) {
 
 // ── ACTION: TOGGLE DASHBOARD ITEM ──
 function toggleDashboardItem(id, el, weekNum, subject) {
+  // Prevent double clicks during the shifting transition
+  if (el) el.style.pointerEvents = 'none';
+  
   const isDone = !appState.completed[id];
   appState.completed[id] = isDone || undefined;
   if (!isDone) delete appState.completed[id];
