@@ -42,6 +42,18 @@ const ProgressSchema = new mongoose.Schema({
     type: String,
     default: 'cyber'
   },
+  studySessions: {
+    type: Array,
+    default: []
+  },
+  subjects: {
+    type: [String],
+    default: ['DSA', 'ML']
+  },
+  customResources: {
+    type: Array,
+    default: []
+  },
   updatedAt: {
     type: Date,
     default: Date.now

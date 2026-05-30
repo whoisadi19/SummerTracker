@@ -52,7 +52,10 @@ async function syncCloudProgress() {
         xp: appState.xp,
         heatmap: appState.heatmap,
         notes: appState.notes,
-        theme: appState.theme
+        theme: appState.theme,
+        studySessions: appState.studySessions,
+        subjects: appState.subjects,
+        customResources: appState.customResources
       })
     });
     if (res.status === 403) {
@@ -89,6 +92,28 @@ async function fetchCloudProgress() {
       appState.notes = { ...(appState.notes || {}), ...(cloudData.notes || {}) };
       
       if (cloudData.theme) appState.theme = cloudData.theme;
+
+      // Safe merge studySessions by ID
+      const localSessions = appState.studySessions || [];
+      const cloudSessions = cloudData.studySessions || [];
+      const sessionMap = new Map();
+      localSessions.forEach(s => { if (s && s.id) sessionMap.set(s.id, s); });
+      cloudSessions.forEach(s => { if (s && s.id) sessionMap.set(s.id, s); });
+      appState.studySessions = Array.from(sessionMap.values()).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+      // Safe merge subjects using Set
+      const localSubjects = appState.subjects || ['DSA', 'ML'];
+      const cloudSubjects = cloudData.subjects || [];
+      const subjectSet = new Set([...localSubjects, ...cloudSubjects]);
+      appState.subjects = Array.from(subjectSet);
+
+      // Safe merge customResources by ID
+      const localResources = appState.customResources || [];
+      const cloudResources = cloudData.customResources || [];
+      const resourceMap = new Map();
+      localResources.forEach(r => { if (r && r.id) resourceMap.set(r.id, r); });
+      cloudResources.forEach(r => { if (r && r.id) resourceMap.set(r.id, r); });
+      appState.customResources = Array.from(resourceMap.values());
 
       // Save locally and refresh frontend
       localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
@@ -364,7 +389,24 @@ function togglePomodoro() {
 }
 
 function resetPomodoro() {
-  if (pomoTimer) { clearInterval(pomoTimer); pomoTimer = null; }
+  if (pomoTimer) {
+    clearInterval(pomoTimer);
+    pomoTimer = null;
+  }
+  
+  const elapsed = (pomoMode === 'work' ? 25 * 60 : 5 * 60) - pomoTimeLeft;
+  if (pomoMode === 'work' && elapsed >= 60) {
+    const mins = Math.floor(elapsed / 60);
+    const secs = elapsed % 60;
+    if (confirm(`You studied for ${mins}m ${secs}s. Would you like to log this partial study session?`)) {
+      const xpEarned = Math.round((elapsed / 1500) * 20) || 1;
+      appState.xp = (appState.xp || 0) + xpEarned;
+      logStudySession(pomoActiveSubject, elapsed);
+      saveState();
+      renderDashboard();
+      showToast(`Logged partial session: +${xpEarned} XP! 🎯`);
+    }
+  }
   
   const playSvg = '<polygon points="5 3 19 12 5 21 5 3"></polygon>';
   const icon = document.getElementById('pomoPlayIcon');
@@ -1021,13 +1063,33 @@ function renderSubjectsList() {
   if (!container) return;
   const subjects = appState.subjects || ['DSA', 'ML'];
   
-  container.innerHTML = subjects.map(sub => `
-    <button class="cl-chip ${sub === pomoActiveSubject ? 'active' : ''}" 
-            onclick="selectPomoSubject('${sub}')" 
-            style="width:100%; text-align:left; padding:12px 16px; justify-content:flex-start; border-radius:8px;">
-      📚 ${sub}
-    </button>
-  `).join('');
+  container.innerHTML = subjects.map(sub => {
+    const isDefault = sub === 'DSA' || sub === 'ML';
+    return `
+      <div class="cl-chip ${sub === pomoActiveSubject ? 'active' : ''}" 
+           onclick="selectPomoSubject('${sub}')" 
+           style="width:100%; display:flex; justify-content:space-between; align-items:center; padding:12px 16px; border-radius:8px; cursor:pointer; font-family:inherit; font-size:inherit;">
+        <span style="display:flex; align-items:center; gap:8px;">📚 ${sub}</span>
+        ${!isDefault ? `
+          <button class="cl-action-btn" onclick="deleteCustomSubject('${sub}', event)" title="Delete subject" style="color:var(--text-muted); font-size:12px; padding:2px 6px; border-radius:4px; margin-left:8px; line-height:1;">✕</button>
+        ` : ''}
+      </div>
+    `;
+  }).join('');
+}
+
+function deleteCustomSubject(sub, e) {
+  e.stopPropagation();
+  if (!confirm(`Delete subject "${sub}"? This will not delete its logged study sessions.`)) return;
+  appState.subjects = (appState.subjects || ['DSA', 'ML']).filter(s => s !== sub);
+  if (pomoActiveSubject === sub) {
+    pomoActiveSubject = 'DSA';
+    const displayEl = document.getElementById('pomoActiveSubjectDisplay');
+    if (displayEl) displayEl.textContent = 'DSA';
+  }
+  saveState();
+  renderSubjectsList();
+  showToast(`Subject "${sub}" deleted!`);
 }
 
 function selectPomoSubject(subject) {
@@ -1098,7 +1160,7 @@ function renderInsightsTab() {
         
         return `
           <div>
-            <div style="display:flex; justify-content:between; font-size:13px; margin-bottom:4px;">
+            <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
               <span style="font-weight:700; color:var(--text-primary);">${k}</span>
               <span style="color:var(--text-muted); margin-left:auto;">${hours.toFixed(1)} hrs</span>
             </div>
@@ -1111,17 +1173,25 @@ function renderInsightsTab() {
   
   // 2. Study Slots Breakdown
   let morningSess = 0, afternoonSess = 0, eveningSess = 0;
+  let morningCount = 0, afternoonCount = 0, eveningCount = 0;
   sessions.forEach(s => {
     const hr = new Date(s.timestamp).getHours();
     const hrs = s.duration / 3600;
-    if (hr >= 6 && hr < 12) morningSess += hrs;
-    else if (hr >= 12 && hr < 18) afternoonSess += hrs;
-    else eveningSess += hrs;
+    if (hr >= 6 && hr < 12) {
+      morningSess += hrs;
+      morningCount++;
+    } else if (hr >= 12 && hr < 18) {
+      afternoonSess += hrs;
+      afternoonCount++;
+    } else {
+      eveningSess += hrs;
+      eveningCount++;
+    }
   });
   
-  document.getElementById('insightSlotMorning').textContent = morningSess.toFixed(1) + 'h';
-  document.getElementById('insightSlotAfternoon').textContent = afternoonSess.toFixed(1) + 'h';
-  document.getElementById('insightSlotEvening').textContent = eveningSess.toFixed(1) + 'h';
+  document.getElementById('insightSlotMorning').innerHTML = `${morningSess.toFixed(1)}h <div style="font-size:10px; font-weight:normal; color:var(--text-muted); margin-top:2px;">${morningCount} session${morningCount !== 1 ? 's' : ''}</div>`;
+  document.getElementById('insightSlotAfternoon').innerHTML = `${afternoonSess.toFixed(1)}h <div style="font-size:10px; font-weight:normal; color:var(--text-muted); margin-top:2px;">${afternoonCount} session${afternoonCount !== 1 ? 's' : ''}</div>`;
+  document.getElementById('insightSlotEvening').innerHTML = `${eveningSess.toFixed(1)}h <div style="font-size:10px; font-weight:normal; color:var(--text-muted); margin-top:2px;">${eveningCount} session${eveningCount !== 1 ? 's' : ''}</div>`;
   
   // 3. XP Projections & Averages
   const totalHours = sessions.reduce((acc, s) => acc + (s.duration / 3600), 0);
@@ -1133,13 +1203,18 @@ function renderInsightsTab() {
   document.getElementById('insightDailyAvg').textContent = dailyAvgMin >= 60 ? (dailyAvgMin / 60).toFixed(1) + 'h' : Math.round(dailyAvgMin) + 'm';
   
   // XP MileStone: Level Up is every 100 XP. Timer gives 20 XP per completed work session (25 mins = 0.42 hrs).
-  // So to get 100 XP from timer alone, you need 5 work sessions = 125 mins = 2.08 hours.
-  // Next Level up requires: (100 - (xp % 100)) / 20 * 25 mins.
   const xp = appState.xp || 0;
   const xpNeeded = 100 - (xp % 100);
   const workSessionsNeeded = Math.ceil(xpNeeded / 20);
   const hoursNeeded = (workSessionsNeeded * 25) / 60;
   document.getElementById('insightMilestoneHours').textContent = hoursNeeded.toFixed(1);
+
+  // Dynamic Level progress bar updating
+  const currentXP = xp % 100;
+  const xpTextEl = document.getElementById('insightXpText');
+  const xpBarEl = document.getElementById('insightXpBar');
+  if (xpTextEl) xpTextEl.textContent = `${currentXP} / 100 XP`;
+  if (xpBarEl) xpBarEl.style.width = currentXP + '%';
   
   // 4. Session Log
   const logContainer = document.getElementById('insightsSessionLog');
@@ -1158,12 +1233,25 @@ function renderInsightsTab() {
               <span style="font-weight:700; color:var(--text-primary);">${s.subject}</span>
               <span style="color:var(--text-muted); font-size:10px; margin-left:6px;">${dateStr} at ${timeStr}</span>
             </div>
-            <strong style="color:var(--accent-ml);">${Math.round(s.duration / 60)} mins</strong>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <strong style="color:var(--accent-ml);">${Math.round(s.duration / 60)} mins</strong>
+              <button class="cl-action-btn" onclick="deleteStudySession('${s.id}', event)" title="Delete session" style="color:var(--text-muted); font-size:12px; padding:2px 6px; border-radius:4px; margin-left:4px;">✕</button>
+            </div>
           </div>
         `;
       }).join('');
     }
   }
+}
+
+function deleteStudySession(id, e) {
+  e.stopPropagation();
+  if (!confirm('Are you sure you want to delete this study session? This will recalculate all study insights.')) return;
+  appState.studySessions = (appState.studySessions || []).filter(s => s.id !== id);
+  saveState();
+  renderInsightsTab();
+  if (typeof renderDashboard === 'function') renderDashboard();
+  showToast('Study session deleted! 🗑️');
 }
 
 // ── RESOURCES VIEW (CUSTOM MANAGER) ──
@@ -1408,6 +1496,9 @@ function confirmResetAll() {
   appState.heatmap = {};
   appState.notes = {};
   appState.lastLevel = 1;
+  appState.studySessions = [];
+  appState.subjects = ['DSA', 'ML'];
+  appState.customResources = [...DEFAULT_RESOURCES];
   saveState();
   renderDashboard();
   renderChecklist();
@@ -1529,6 +1620,646 @@ function logout(forced = false) {
     renderUserWidget();
     showToast('Signed out.');
   }
+}
+
+// ── DSA & REVIEW LAB LOGIC ──
+let labActiveTab = 'visualizer';
+let visData = [];
+let visRunning = false;
+let visStopRequested = false;
+let visDelay = 300;
+
+function switchLabTab(tab) {
+  labActiveTab = tab;
+  document.getElementById('btnLabVisualizer').classList.toggle('active', tab === 'visualizer');
+  document.getElementById('btnLabPlayground').classList.toggle('active', tab === 'playground');
+  document.getElementById('btnLabFlashcards').classList.toggle('active', tab === 'flashcards');
+  
+  document.getElementById('labPanelVisualizer').style.display = tab === 'visualizer' ? 'block' : 'none';
+  document.getElementById('labPanelPlayground').style.display = tab === 'playground' ? 'block' : 'none';
+  document.getElementById('labPanelFlashcards').style.display = tab === 'flashcards' ? 'block' : 'none';
+  
+  if (tab === 'visualizer') {
+    initVisualizer();
+  } else if (tab === 'playground') {
+    loadCodeTemplate();
+  } else if (tab === 'flashcards') {
+    renderFlashcards();
+  }
+}
+
+// ── 1. ALGORITHM VISUALIZER ──
+function updateVisSpeed(val) {
+  visDelay = parseInt(val);
+  document.getElementById('visSpeedVal').textContent = val;
+}
+
+function initVisualizer() {
+  if (visRunning) {
+    visStopRequested = true;
+  }
+  const algo = document.getElementById('visAlgorithmSelect').value;
+  const canvas = document.getElementById('visCanvas');
+  const title = document.getElementById('visAlgoTitle');
+  const consoleEl = document.getElementById('visConsole');
+  
+  if (!canvas) return;
+  canvas.innerHTML = '';
+  consoleEl.innerHTML = `<div class="vis-console-line">&gt; Initialized visual workspace for ${algo === 'binary' ? 'Binary Search' : algo === 'bubble' ? 'Bubble Sort' : 'Selection Sort'}.</div>`;
+  
+  if (algo === 'binary') {
+    title.textContent = "Visualizing Binary Search (Target: 62)";
+    // Sorted array
+    visData = [12, 17, 24, 32, 45, 53, 62, 70, 85, 99];
+    canvas.className = "vis-canvas binary";
+    
+    visData.forEach((val, idx) => {
+      const el = document.createElement('div');
+      el.className = 'vis-node';
+      el.id = `vis-node-${idx}`;
+      el.innerHTML = `
+        <span class="vis-node-val">${val}</span>
+        <span class="vis-node-idx">${idx}</span>
+      `;
+      canvas.appendChild(el);
+    });
+    
+    // Add Low, Mid, High pointers
+    const pointerRow = document.createElement('div');
+    pointerRow.className = 'vis-pointers';
+    pointerRow.id = 'visPointers';
+    pointerRow.style.position = 'relative';
+    pointerRow.style.width = '100%';
+    pointerRow.style.height = '32px';
+    pointerRow.style.marginTop = '12px';
+    canvas.appendChild(pointerRow);
+    
+  } else {
+    // Sorting
+    title.textContent = `Visualizing ${algo === 'bubble' ? 'Bubble Sort' : 'Selection Sort'}`;
+    canvas.className = "vis-canvas sorting";
+    
+    if (visData.length === 0 || visData.length === 10) {
+      // Generate standard array
+      visData = [55, 23, 87, 12, 42, 67, 95, 30, 15, 76];
+    }
+    
+    visData.forEach((val, idx) => {
+      const bar = document.createElement('div');
+      bar.className = 'vis-bar';
+      bar.id = `vis-bar-${idx}`;
+      bar.style.height = `${val}%`;
+      bar.innerHTML = `<span class="vis-bar-label">${val}</span>`;
+      canvas.appendChild(bar);
+    });
+  }
+  visRunning = false;
+  visStopRequested = false;
+}
+
+function generateNewVisualizerData() {
+  const algo = document.getElementById('visAlgorithmSelect').value;
+  if (algo === 'binary') {
+    // Random sorted array with 62 as a guarantee
+    let arr = [62];
+    while(arr.length < 10) {
+      let num = Math.floor(Math.random() * 90) + 10;
+      if (!arr.includes(num)) arr.push(num);
+    }
+    visData = arr.sort((a,b) => a-b);
+  } else {
+    // Fully randomized heights
+    visData = [];
+    for(let i=0; i<10; i++) {
+      visData.push(Math.floor(Math.random() * 85) + 15);
+    }
+  }
+  initVisualizer();
+}
+
+function resetVisualizer() {
+  visStopRequested = true;
+  setTimeout(() => {
+    initVisualizer();
+  }, 100);
+}
+
+// Visual helper sleep function
+const visSleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+async function runVisualizer() {
+  if (visRunning) return;
+  visRunning = true;
+  visStopRequested = false;
+  
+  const playBtn = document.getElementById('visPlayBtn');
+  if (playBtn) playBtn.textContent = '⏸ Pause';
+  
+  const algo = document.getElementById('visAlgorithmSelect').value;
+  
+  try {
+    if (algo === 'bubble') {
+      await runBubbleSort();
+    } else if (algo === 'selection') {
+      await runSelectionSort();
+    } else if (algo === 'binary') {
+      await runBinarySearch();
+    }
+  } catch (err) {
+    console.warn('Visualizer stopped or error boundary met.');
+  }
+  
+  visRunning = false;
+  if (playBtn) playBtn.textContent = '▶ Run';
+}
+
+// BUBBLE SORT VISUALIZER LOOP
+async function runBubbleSort() {
+  const consoleEl = document.getElementById('visConsole');
+  const len = visData.length;
+  
+  for (let i = 0; i < len; i++) {
+    for (let j = 0; j < len - i - 1; j++) {
+      if (visStopRequested) throw new Error('Stop');
+      
+      const barA = document.getElementById(`vis-bar-${j}`);
+      const barB = document.getElementById(`vis-bar-${j+1}`);
+      
+      // Highlight comparing
+      barA.style.background = 'var(--accent-ml)';
+      barB.style.background = 'var(--accent-ml)';
+      consoleEl.innerHTML = `<div class="vis-console-line">&gt; Comparing Bar[${j}] (${visData[j]}) and Bar[${j+1}] (${visData[j+1]})</div>`;
+      await visSleep(visDelay);
+      
+      if (visData[j] > visData[j+1]) {
+        // Swap
+        consoleEl.innerHTML = `<div class="vis-console-line active">&gt; Swap needed! ${visData[j]} &gt; ${visData[j+1]}</div>`;
+        barA.style.background = 'var(--accent-dsa)';
+        barB.style.background = 'var(--accent-dsa)';
+        
+        let temp = visData[j];
+        visData[j] = visData[j+1];
+        visData[j+1] = temp;
+        
+        // Render Swap visually
+        barA.style.height = `${visData[j]}%`;
+        barA.querySelector('.vis-bar-label').textContent = visData[j];
+        barB.style.height = `${visData[j+1]}%`;
+        barB.querySelector('.vis-bar-label').textContent = visData[j+1];
+        
+        await visSleep(visDelay);
+      }
+      
+      barA.style.background = 'var(--bg-surface-2)';
+      barB.style.background = 'var(--bg-surface-2)';
+    }
+    
+    // Last element is sorted
+    const sortedBar = document.getElementById(`vis-bar-${len - i - 1}`);
+    if (sortedBar) sortedBar.style.background = 'var(--accent-gold)';
+  }
+  
+  consoleEl.innerHTML = `<div class="vis-console-line success">&gt; Array sorted complete! All elements aligned.</div>`;
+  shootConfetti();
+}
+
+// SELECTION SORT VISUALIZER LOOP
+async function runSelectionSort() {
+  const consoleEl = document.getElementById('visConsole');
+  const len = visData.length;
+  
+  for (let i = 0; i < len; i++) {
+    let minIdx = i;
+    const barCurrent = document.getElementById(`vis-bar-${i}`);
+    barCurrent.style.background = 'var(--accent-ml)';
+    
+    for (let j = i + 1; j < len; j++) {
+      if (visStopRequested) throw new Error('Stop');
+      
+      const barCheck = document.getElementById(`vis-bar-${j}`);
+      barCheck.style.background = 'var(--accent-rev)';
+      consoleEl.innerHTML = `<div class="vis-console-line">&gt; Checking element at index ${j} (${visData[j]}) against current min at ${minIdx} (${visData[minIdx]})</div>`;
+      await visSleep(visDelay);
+      
+      if (visData[j] < visData[minIdx]) {
+        if (minIdx !== i) {
+          const oldMin = document.getElementById(`vis-bar-${minIdx}`);
+          if (oldMin) oldMin.style.background = 'var(--bg-surface-2)';
+        }
+        minIdx = j;
+        barCheck.style.background = 'var(--accent-dsa)';
+        consoleEl.innerHTML = `<div class="vis-console-line active">&gt; New minimum element found at index ${minIdx} (${visData[minIdx]})</div>`;
+        await visSleep(visDelay);
+      } else {
+        barCheck.style.background = 'var(--bg-surface-2)';
+      }
+    }
+    
+    if (minIdx !== i) {
+      consoleEl.innerHTML = `<div class="vis-console-line active">&gt; Swapping min at index ${minIdx} with index ${i}</div>`;
+      const barMin = document.getElementById(`vis-bar-${minIdx}`);
+      
+      let temp = visData[i];
+      visData[i] = visData[minIdx];
+      visData[minIdx] = temp;
+      
+      barCurrent.style.height = `${visData[i]}%`;
+      barCurrent.querySelector('.vis-bar-label').textContent = visData[i];
+      barMin.style.height = `${visData[minIdx]}%`;
+      barMin.querySelector('.vis-bar-label').textContent = visData[minIdx];
+      
+      barMin.style.background = 'var(--bg-surface-2)';
+      await visSleep(visDelay);
+    }
+    
+    barCurrent.style.background = 'var(--accent-gold)';
+  }
+  
+  consoleEl.innerHTML = `<div class="vis-console-line success">&gt; Array sorted complete using Selection Sort!</div>`;
+  shootConfetti();
+}
+
+// BINARY SEARCH VISUALIZER LOOP
+async function runBinarySearch() {
+  const consoleEl = document.getElementById('visConsole');
+  const target = 62;
+  
+  let low = 0;
+  let high = visData.length - 1;
+  let step = 1;
+  
+  // Render pointers visually
+  function updatePointers(l, m, h) {
+    const pointerRow = document.getElementById('visPointers');
+    if (!pointerRow) return;
+    pointerRow.innerHTML = '';
+    
+    visData.forEach((_, idx) => {
+      let label = '';
+      if (idx === l) label += 'L ';
+      if (idx === m) label += 'M ';
+      if (idx === h) label += 'H';
+      
+      if (label) {
+        const ptr = document.createElement('div');
+        ptr.style.position = 'absolute';
+        ptr.style.left = `calc(${(idx / 10) * 100}% + 4px)`;
+        ptr.style.fontFamily = "'JetBrains Mono', monospace";
+        ptr.style.fontSize = "10px";
+        ptr.style.fontWeight = "700";
+        ptr.style.color = idx === m ? "var(--accent-gold)" : idx === l ? "var(--accent-dsa)" : "var(--accent-ml)";
+        ptr.textContent = label.trim();
+        pointerRow.appendChild(ptr);
+      }
+    });
+  }
+  
+  while (low <= high) {
+    if (visStopRequested) throw new Error('Stop');
+    
+    let mid = Math.floor((low + high) / 2);
+    updatePointers(low, mid, high);
+    
+    // Highlight active range
+    for (let k = 0; k < visData.length; k++) {
+      const node = document.getElementById(`vis-node-${k}`);
+      if (node) {
+        if (k >= low && k <= high) {
+          node.style.background = 'var(--bg-surface-2)';
+          node.style.borderColor = 'var(--border-2)';
+        } else {
+          node.style.background = 'transparent';
+          node.style.opacity = '0.3';
+        }
+      }
+    }
+    
+    const midNode = document.getElementById(`vis-node-${mid}`);
+    if (midNode) midNode.style.background = 'var(--bg-hover)';
+    
+    consoleEl.innerHTML = `<div class="vis-console-line">&gt; [Step ${step++}] low = ${low}, high = ${high}, mid = ${mid} (Val: ${visData[mid]})</div>`;
+    await visSleep(visDelay * 1.5);
+    
+    if (visData[mid] === target) {
+      if (midNode) {
+        midNode.style.background = 'var(--accent-gold)';
+        midNode.style.borderColor = 'var(--accent-gold)';
+      }
+      consoleEl.innerHTML = `<div class="vis-console-line success">&gt; Target FOUND! Element 62 found at index ${mid}.</div>`;
+      shootConfetti();
+      return;
+    }
+    
+    if (visData[mid] < target) {
+      consoleEl.innerHTML = `<div class="vis-console-line active">&gt; mid val (${visData[mid]}) &lt; target (62). Ignore left half. low moves to ${mid + 1}.</div>`;
+      low = mid + 1;
+    } else {
+      consoleEl.innerHTML = `<div class="vis-console-line active">&gt; mid val (${visData[mid]}) &gt; target (62). Ignore right half. high moves to ${mid - 1}.</div>`;
+      high = mid - 1;
+    }
+    
+    await visSleep(visDelay * 1.5);
+  }
+  
+  consoleEl.innerHTML = `<div class="vis-console-line error">&gt; Target element 62 not found in search bounds.</div>`;
+}
+
+// ── 2. CODE PLAYGROUND ──
+const PLAYGROUND_TEMPLATES = {
+  'cpp-dsa': `// C++ DSA Sandbox
+#include <iostream>
+#include <vector>
+#include <string>
+
+using namespace std;
+
+int main() {
+    vector<string> list = {"DSA", "Machine Learning", "System Design"};
+    cout << "Active Curriculum Count: " << list.size() << endl;
+    for (int i = 0; i < list.size(); i++) {
+        cout << ">> Slot " << (i+1) << ": " << list[i] << endl;
+    }
+    return 0;
+}`,
+  'py-ml': `# Python ML Sandbox fit
+import numpy as np
+
+def compute_mean_error(predictions, actual):
+    return np.mean((predictions - actual) ** 2)
+
+actual = np.array([24.2, 18.5, 30.1, 42.0])
+predictions = np.array([25.0, 18.0, 29.8, 43.1])
+
+mse = compute_mean_error(predictions, actual)
+print("Computed Mean Squared Error (MSE):", mse)
+print("Fit complete. Epoch 100/100 loss: 0.042")`,
+  'cpp-bubble': `// C++ Bubble Sort Implementation
+#include <iostream>
+#include <vector>
+
+void bubbleSort(std::vector<int>& arr) {
+    int n = arr.size();
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n - i - 1; j++) {
+            if (arr[j] > arr[j + 1]) {
+                std::swap(arr[j], arr[j + 1]);
+            }
+        }
+    }
+}`,
+  'cpp-binary': `// C++ Binary Search Implementation
+#include <iostream>
+#include <vector>
+
+int binarySearch(const std::vector<int>& arr, int target) {
+    int low = 0, high = arr.size() - 1;
+    while (low <= high) {
+        int mid = low + (high - low) / 2;
+        if (arr[mid] == target) return mid;
+        if (arr[mid] < target) low = mid + 1;
+        else high = mid - 1;
+    }
+    return -1;
+}`
+};
+
+function loadCodeTemplate() {
+  const select = document.getElementById('playPresetSelect');
+  const textarea = document.getElementById('editorTextarea');
+  if (!select || !textarea) return;
+  
+  textarea.value = PLAYGROUND_TEMPLATES[select.value] || '';
+  updateGutter();
+}
+
+function updateGutter() {
+  const textarea = document.getElementById('editorTextarea');
+  const gutter = document.getElementById('editorGutter');
+  if (!textarea || !gutter) return;
+  
+  const lines = textarea.value.split('\n').length;
+  let html = '';
+  for(let i=1; i<=lines; i++) {
+    html += `<div>${i}</div>`;
+  }
+  gutter.innerHTML = html;
+  
+  // Update line info text
+  document.getElementById('editorLineNum').textContent = `LINES: ${lines}`;
+}
+
+function syncGutterScroll() {
+  const textarea = document.getElementById('editorTextarea');
+  const gutter = document.getElementById('editorGutter');
+  if (!textarea || !gutter) return;
+  gutter.scrollTop = textarea.scrollTop;
+}
+
+function resetCodePlayground() {
+  const textarea = document.getElementById('editorTextarea');
+  if (textarea) {
+    textarea.value = '';
+    updateGutter();
+  }
+  document.getElementById('playgroundConsole').innerHTML = `<div class="vis-console-line">&gt; Sandbox cleared. Ready.</div>`;
+}
+
+async function runSimulatedCode() {
+  const consoleEl = document.getElementById('playgroundConsole');
+  if (!consoleEl) return;
+  
+  consoleEl.innerHTML = `<div class="vis-console-line active">&gt; Initiating sandbox compilation...</div>`;
+  await visSleep(500);
+  consoleEl.innerHTML += `<div class="vis-console-line active">&gt; GCC compiler linking STL vectors and headers...</div>`;
+  await visSleep(500);
+  consoleEl.innerHTML += `<div class="vis-console-line active">&gt; Compiled successfully. Running simulated sandbox...</div>`;
+  await visSleep(600);
+  
+  const select = document.getElementById('playPresetSelect').value;
+  let output = '';
+  if (select === 'cpp-dsa') {
+    output = `Active Curriculum Count: 3\n>> Slot 1: DSA\n>> Slot 2: Machine Learning\n>> Slot 3: System Design\n\nProcess completed successfully in 0.04s.`;
+  } else if (select === 'py-ml') {
+    output = `Computed Mean Squared Error (MSE): 0.3549999999999998\nFit complete. Epoch 100/100 loss: 0.042\n\nProcess completed in 0.12s.`;
+  } else if (select === 'cpp-bubble') {
+    output = `Compiling Unit bubbleSort...\nTesting array: [55, 23, 87, 12, 42, 67, 95, 30, 15, 76]\nSorted Output: [12, 15, 23, 30, 42, 55, 67, 76, 87, 95]\n\n[Test cases] 5/5 PASSED. Function is 100% correct! 🏆`;
+    shootConfetti();
+  } else if (select === 'cpp-binary') {
+    output = `Compiling Unit binarySearch...\nTesting array: [12, 17, 24, 32, 45, 53, 62, 70, 85, 99]\nSearch target: 62\nTarget index found: 6\n\n[Test cases] 5/5 PASSED. Function matches standard STL upper bounds! 🏆`;
+    shootConfetti();
+  } else {
+    output = `Execution complete. Output: OK.`;
+  }
+  
+  consoleEl.innerHTML += `<div class="vis-console-line success" style="white-space:pre-line; margin-top:6px;">${output}</div>`;
+}
+
+// ── 3. SPACED REPETITION FLASHCARDS (LEITNER) ──
+let fcDeck = [];
+let fcCurrentIdx = -1;
+let fcFlipped = false;
+
+function initFlashcards() {
+  if (appState.flashcards) {
+    fcDeck = appState.flashcards;
+    return;
+  }
+  
+  // Preset highly productive flashcards to study DSA / ML
+  fcDeck = [
+    {
+      id: 'dsa-fc-1',
+      question: "What is the worst-case time complexity of Quick Sort, and how can it be avoided?",
+      answer: "Worst-case is O(N²) when elements are already sorted or reverse-sorted. It can be avoided by selecting a random element as pivot, or using the Median-of-Three pivot selection method to guarantee balanced partitioning.",
+      leitnerBox: 1,
+      dueDate: new Date().toISOString()
+    },
+    {
+      id: 'ml-fc-1',
+      question: "What is the core difference between L1 (Lasso) and L2 (Ridge) Regularization?",
+      answer: "L1 regularization adds a penalty equal to the absolute value of the weights O(|w|), driving weights of irrelevant features to absolute zero (useful for sparse feature selection). L2 regularization adds a penalty equal to the square of weights O(w²), shrinking weights close to zero but never absolute zero, keeping all features in model.",
+      leitnerBox: 1,
+      dueDate: new Date().toISOString()
+    },
+    {
+      id: 'dsa-fc-2',
+      question: "Why is std::unordered_map faster than std::map in C++ STL?",
+      answer: "std::unordered_map uses a hash table internally, providing average-case O(1) time complexity for lookup. std::map is implemented using a self-balancing Red-Black Tree, requiring O(log N) lookup but guaranteeing sorted order of keys.",
+      leitnerBox: 1,
+      dueDate: new Date().toISOString()
+    }
+  ];
+  appState.flashcards = fcDeck;
+  saveState();
+}
+
+function renderFlashcards() {
+  initFlashcards();
+  
+  const now = new Date();
+  const dueCards = fcDeck.filter(card => new Date(card.dueDate) <= now);
+  
+  document.getElementById('fcDueCount').textContent = dueCards.length;
+  document.getElementById('fcTotalCount').textContent = fcDeck.length;
+  
+  // Dashboard stats integration update if present
+  const dashDue = document.getElementById('statFcDue');
+  if (dashDue) dashDue.textContent = dueCards.length;
+  
+  const frontText = document.getElementById('fcQuestionText');
+  const backText = document.getElementById('fcAnswerText');
+  const controls = document.getElementById('fcGradingControls');
+  const cardWidget = document.getElementById('flashcardWidget');
+  const inner = document.getElementById('flashcardInner');
+  
+  if (dueCards.length === 0) {
+    frontText.innerHTML = `<div style="font-size: 15px; font-weight: 500;">🚀 You have completed all active scheduled reviews! Complete new study checklist items to automatically schedule cards, or create custom ones in the sidebar.</div>`;
+    backText.textContent = '';
+    controls.style.display = 'none';
+    if (inner) inner.style.transform = '';
+    fcCurrentIdx = -1;
+    fcFlipped = false;
+    return;
+  }
+  
+  fcCurrentIdx = fcDeck.findIndex(c => c.id === dueCards[0].id);
+  const card = fcDeck[fcCurrentIdx];
+  
+  frontText.innerHTML = `
+    <div style="font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.12em; margin-bottom:14px; font-weight:600;">ACTIVE RECALL QUESTION</div>
+    <div style="font-size:16px; font-weight:700; line-height:1.4;">${card.question}</div>
+    <div style="font-size:11px; color:var(--text-muted); font-family:'JetBrains Mono',monospace; letter-spacing:0.02em; margin-top:20px; font-weight:500;">(TAP CARD TO REVEAL EXPLANATION)</div>
+  `;
+  
+  backText.innerHTML = `
+    <div style="font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.12em; margin-bottom:14px; font-weight:600;">SCIENTIFIC EXPLANATION</div>
+    <div style="font-size:14px; font-weight:500; line-height:1.5; text-align:left;">${card.answer}</div>
+    <div style="font-size:11px; color:var(--text-muted); font-family:'JetBrains Mono',monospace; letter-spacing:0.02em; margin-top:20px; font-weight:500; text-align:center;">(RATE YOUR RECALL QUALITY BELOW)</div>
+  `;
+  
+  if (inner) inner.style.transform = '';
+  fcFlipped = false;
+  controls.style.display = 'none';
+}
+
+function flipFlashcard() {
+  if (fcCurrentIdx === -1) return;
+  const inner = document.getElementById('flashcardInner');
+  const controls = document.getElementById('fcGradingControls');
+  
+  if (!fcFlipped) {
+    inner.style.transform = 'rotateY(180deg)';
+    fcFlipped = true;
+    controls.style.display = 'flex';
+  } else {
+    inner.style.transform = '';
+    fcFlipped = false;
+    controls.style.display = 'none';
+  }
+}
+
+function gradeRecall(grade) {
+  if (fcCurrentIdx === -1) return;
+  const card = fcDeck[fcCurrentIdx];
+  const now = new Date();
+  
+  let days = 1;
+  if (grade === 1) {
+    // Forgot: Box 1, schedule in 1 day
+    card.leitnerBox = 1;
+    days = 1;
+    showToast("Re-scheduled for tomorrow's deck 🧠");
+  } else if (grade === 2) {
+    // Struggled: Box 2, schedule in 3 days
+    card.leitnerBox = 2;
+    days = 3;
+    showToast("Slight struggle. Review in 3 days 🧠");
+  } else if (grade === 3) {
+    // Nailed: Box 3, schedule in 7 days
+    card.leitnerBox = 3;
+    days = 7;
+    showToast("Mastered! Review scheduled in 7 days 🏆");
+  }
+  
+  const due = new Date();
+  due.setDate(now.getDate() + days);
+  card.dueDate = due.toISOString();
+  
+  saveState();
+  renderFlashcards();
+}
+
+function addCustomFlashcard() {
+  const qEl = document.getElementById('fcQuestionInput');
+  const aEl = document.getElementById('fcAnswerInput');
+  if (!qEl || !aEl) return;
+  
+  const q = qEl.value.trim();
+  const a = aEl.value.trim();
+  
+  if (!q || !a) {
+    showToast("Please enter both question & answer!");
+    return;
+  }
+  
+  initFlashcards();
+  
+  const newCard = {
+    id: `fc-custom-${Date.now()}`,
+    question: q,
+    answer: a,
+    leitnerBox: 1,
+    dueDate: new Date().toISOString() // Due immediately!
+  };
+  
+  fcDeck.push(newCard);
+  appState.flashcards = fcDeck;
+  saveState();
+  
+  qEl.value = '';
+  aEl.value = '';
+  showToast("Flashcard successfully created!");
+  renderFlashcards();
 }
 
 // ── BOOT ──

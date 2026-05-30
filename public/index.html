@@ -50,6 +50,10 @@
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/><circle cx="12" cy="12" r="3"/></svg>
         <span>Pinger</span>
       </button>
+      <button class="nav-item" data-view="lab" onclick="navigate('lab')">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="6 2 18 2 18 6 6 6 6 2"/><path d="M3 20v-4c0-2.2 1.8-4 4-4h10c2.2 0 4 1.8 4 4v4c0 1.1-.9 2-2 2H5c-1.1 0-2-.9-2-2z"/><circle cx="12" cy="14" r="2"/></svg>
+        <span>DSA Lab</span>
+      </button>
     </div>
 
     <div class="sidebar-bottom">
@@ -100,6 +104,10 @@
     <button class="mob-nav-item" data-view="pinger" onclick="navigate('pinger')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/><circle cx="12" cy="12" r="3"/></svg>
       <span>Pinger</span>
+    </button>
+    <button class="mob-nav-item" data-view="lab" onclick="navigate('lab')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><polygon points="6 2 18 2 18 6 6 6 6 2"/><path d="M3 20v-4c0-2.2 1.8-4 4-4h10c2.2 0 4 1.8 4 4v4c0 1.1-.9 2-2 2H5c-1.1 0-2-.9-2-2z"/><circle cx="12" cy="14" r="2"/></svg>
+      <span>Lab</span>
     </button>
   </nav>
 
@@ -505,7 +513,17 @@
             <div style="background:var(--bg-surface-2); padding:16px; border-radius:8px; border:1px solid var(--border); line-height:1.5; font-size:13px; color:var(--text-secondary);">
               🧬 Based on your current level speed, completing <strong style="color:var(--accent-dsa);" id="insightMilestoneHours">0</strong> more hour(s) of study will guarantee your next **Level Up**.
             </div>
-            <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--text-muted); margin-top:8px;">
+            <!-- Premium Level Progress Bar -->
+            <div class="xp-integration" style="margin-top: 4px;">
+              <div class="xp-meta" style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 4px;">
+                <span class="xp-title" style="font-weight: 600; color: var(--text-secondary);">Level Progress</span>
+                <span class="xp-text" id="insightXpText" style="color: var(--accent-gold); font-weight: 700;">0 / 100 XP</span>
+              </div>
+              <div class="xp-bar-container" style="background: var(--bg-surface-2); border: 1px solid var(--border); height: 8px; border-radius: 4px; overflow: hidden;">
+                <div class="xp-bar-fill" id="insightXpBar" style="background: linear-gradient(90deg, var(--accent-rev) 0%, var(--accent-gold) 100%); height: 100%; width: 0%; transition: width 0.4s ease;"></div>
+              </div>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--text-muted); margin-top:4px;">
               <span>Daily Average: <strong id="insightDailyAvg">0m</strong></span>
               <span>Total Tracked: <strong id="insightTotalHours">0h</strong></span>
             </div>
@@ -537,6 +555,191 @@
         
         <div id="pingerContent">
           <!-- Handled by pinger.js / app.js logic -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── DSA & REVIEW LAB VIEW ─── -->
+    <section class="view" id="view-lab">
+      <div class="view-container">
+        <div class="view-header" style="flex-direction:row; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:16px;">
+          <div>
+            <div class="view-eyebrow">SUMMER 2026 · DEVELOPMENT SUITE</div>
+            <h1 class="view-title">Coding & Visual <span class="c-dsa">Lab</span></h1>
+          </div>
+          <div class="lab-tabs-container">
+            <button class="lab-tab-btn active" id="btnLabVisualizer" onclick="switchLabTab('visualizer')">📈 Visualizer</button>
+            <button class="lab-tab-btn" id="btnLabPlayground" onclick="switchLabTab('playground')">💻 Playground</button>
+            <button class="lab-tab-btn" id="btnLabFlashcards" onclick="switchLabTab('flashcards')">🧠 Flashcards</button>
+          </div>
+        </div>
+
+        <!-- LAB AREA: VISUALIZER -->
+        <div class="lab-panel active" id="labPanelVisualizer">
+          <div style="display:grid; grid-template-columns: 280px 1fr; gap:24px; margin-top: 24px;" class="pomo-grid-layout">
+            <!-- Settings card -->
+            <div class="res-card" style="display:flex; flex-direction:column; gap:16px;">
+              <h3 class="lab-card-title" style="font-family:'Syne',sans-serif; font-size:15px; font-weight:700; color:var(--text-primary);">Settings</h3>
+              
+              <div class="form-group">
+                <label class="form-label" for="visAlgorithmSelect">Algorithm</label>
+                <select id="visAlgorithmSelect" class="form-input" onchange="initVisualizer()" style="background:var(--bg-surface-2); font-family:inherit;">
+                  <option value="bubble">Bubble Sort</option>
+                  <option value="selection">Selection Sort</option>
+                  <option value="binary">Binary Search</option>
+                </select>
+              </div>
+
+              <!-- Controls -->
+              <div style="display:flex; flex-direction:column; gap:12px; margin-top:8px;">
+                <div style="display:flex; gap:8px;">
+                  <button class="res-btn primary" id="visPlayBtn" onclick="runVisualizer()" style="flex:1;">▶ Run</button>
+                  <button class="res-btn secondary" onclick="resetVisualizer()" style="flex:1;">↺ Reset</button>
+                </div>
+                <div style="display:flex; flex-direction:column; gap:6px;">
+                  <label class="form-label">Speed (Delay: <span id="visSpeedVal">300</span>ms)</label>
+                  <input type="range" id="visSpeedRange" min="50" max="1000" value="300" oninput="updateVisSpeed(this.value)" style="width:100%; accent-color:var(--accent-dsa);">
+                </div>
+              </div>
+
+              <!-- Extra actions -->
+              <button class="res-btn secondary" id="visRandomizeBtn" onclick="generateNewVisualizerData()" style="width:100%;">⚡ Randomize Data</button>
+            </div>
+
+            <!-- Visualization Canvas -->
+            <div class="res-card" style="display:flex; flex-direction:column; min-height:400px; justify-content:space-between; gap:24px;">
+              <h3 class="lab-card-title" id="visAlgoTitle" style="font-family:'Syne',sans-serif; font-size:16px; font-weight:700; color:var(--text-primary);">Visualizing Bubble Sort</h3>
+              
+              <!-- Core Container for visual bars/nodes -->
+              <div class="vis-canvas" id="visCanvas">
+                <!-- Visual Nodes inserted by JS -->
+              </div>
+
+              <!-- Execution Step Logger (Premium Console look!) -->
+              <div class="vis-console" id="visConsole">
+                <div class="vis-console-line">&gt; Select Run to begin algorithm animation...</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- LAB AREA: PLAYGROUND -->
+        <div class="lab-panel" id="labPanelPlayground" style="display:none;">
+          <div style="display:grid; grid-template-columns: 280px 1fr; gap:24px; margin-top: 24px;" class="pomo-grid-layout">
+            <!-- Language selector -->
+            <div class="res-card" style="display:flex; flex-direction:column; gap:16px;">
+              <h3 class="lab-card-title" style="font-family:'Syne',sans-serif; font-size:15px; font-weight:700; color:var(--text-primary);">Settings</h3>
+              
+              <div class="form-group">
+                <label class="form-label" for="playPresetSelect">Language Presets</label>
+                <select id="playPresetSelect" class="form-input" onchange="loadCodeTemplate()" style="background:var(--bg-surface-2); font-family:inherit;">
+                  <option value="cpp-dsa">C++ DSA Template</option>
+                  <option value="py-ml">Python ML Basic</option>
+                  <option value="cpp-bubble">C++ Bubble Sort</option>
+                  <option value="cpp-binary">C++ Binary Search</option>
+                </select>
+              </div>
+              
+              <div style="display:flex; flex-direction:column; gap:10px; margin-top:8px;">
+                <button class="res-btn primary" onclick="runSimulatedCode()" style="width:100%; background:var(--accent-rev);">⚙ Run Sandbox</button>
+                <button class="res-btn secondary" onclick="resetCodePlayground()" style="width:100%;">↺ Clear Code</button>
+              </div>
+            </div>
+
+            <!-- Code Editor Frame -->
+            <div class="res-card" style="display:flex; flex-direction:column; gap:16px; padding:24px;">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h3 class="lab-card-title" style="font-family:'Syne',sans-serif; font-size:15px; font-weight:700; color:var(--text-primary);">Interactive Editor</h3>
+                <span class="vis-console-badge" id="editorLineNum" style="font-family:'JetBrains Mono',monospace; font-size:9px; background:var(--bg-surface-2); border:1px solid var(--border); padding:2px 8px; border-radius:4px; color:var(--text-muted);">READY</span>
+              </div>
+              
+              <!-- Editor block -->
+              <div style="position:relative; width:100%; display:flex; border:1px solid var(--border); border-radius:8px; overflow:hidden;">
+                <!-- Simulated Gutter -->
+                <div class="editor-gutter" id="editorGutter" style="width:40px; background:var(--bg-surface-2); border-right:1px solid var(--border); color:var(--text-muted); font-family:'JetBrains Mono',monospace; font-size:12px; padding:14px 0; text-align:center; user-select:none; line-height:1.5;">
+                  <div>1</div>
+                </div>
+                <textarea id="editorTextarea" class="editor-textarea" spellcheck="false" onscroll="syncGutterScroll()" oninput="updateGutter()" style="flex:1; height:280px; background:transparent; border:none; color:var(--text-primary); font-family:'JetBrains Mono',monospace; font-size:12px; padding:14px; resize:none; line-height:1.5; outline:none; white-space:pre; overflow-x:auto;"></textarea>
+              </div>
+
+              <!-- Compile Output (Console view) -->
+              <div class="vis-console" id="playgroundConsole" style="height:120px;">
+                <div class="vis-console-line">&gt; Sandbox loaded. Select Run to check compile logs & simulated outputs...</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- LAB AREA: FLASHCARDS (LEITNER ACTIVE RECALL) -->
+        <div class="lab-panel" id="labPanelFlashcards" style="display:none;">
+          <div style="display:grid; grid-template-columns: 280px 1fr; gap:24px; margin-top: 24px;" class="pomo-grid-layout">
+            <!-- Review Stats sidebar -->
+            <div class="res-card" style="display:flex; flex-direction:column; gap:20px;">
+              <h3 class="lab-card-title" style="font-family:'Syne',sans-serif; font-size:15px; font-weight:700; color:var(--text-primary);">Leitner Deck</h3>
+              
+              <div class="metrics-grid" style="grid-template-columns:1fr; border-top:none; padding-top:0; gap:12px;">
+                <div class="metric-item level-metric" style="padding-left:10px;">
+                  <span class="metric-val-num" id="fcDueCount">0</span>
+                  <span class="metric-label-text">Cards Due Today</span>
+                </div>
+                <div class="metric-item ml-metric" style="padding-left:10px;">
+                  <span class="metric-val-num" id="fcTotalCount">0</span>
+                  <span class="metric-label-text">Total Active Cards</span>
+                </div>
+              </div>
+
+              <!-- Add manual card form -->
+              <div style="border-top:1px solid var(--border); padding-top:16px; display:flex; flex-direction:column; gap:12px;">
+                <h4 style="font-family:'Syne',sans-serif; font-size:13px; font-weight:700; color:var(--text-secondary);">Create Card</h4>
+                <div class="form-group">
+                  <input type="text" id="fcQuestionInput" class="form-input" placeholder="Question (e.g. Vectors time?)" style="font-size:12px;">
+                </div>
+                <div class="form-group">
+                  <input type="text" id="fcAnswerInput" class="form-input" placeholder="Answer (e.g. O(1) amortized push)" style="font-size:12px;">
+                </div>
+                <button class="res-btn primary" onclick="addCustomFlashcard()" style="width:100%; background:var(--accent-rev); border:none; color:var(--text-primary); font-weight:600;">+ Create Flashcard</button>
+              </div>
+            </div>
+
+            <!-- Active Card Recall Area -->
+            <div class="res-card" style="display:flex; flex-direction:column; min-height:400px; align-items:center; justify-content:center; padding:40px 24px; gap:24px; position:relative; overflow:hidden;">
+              
+              <!-- Flashcard Widget -->
+              <div class="flashcard-container" id="flashcardWidget" onclick="flipFlashcard()">
+                <div class="flashcard-inner" id="flashcardInner">
+                  <!-- Front of Card -->
+                  <div class="flashcard-front">
+                    <div style="font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.12em; margin-bottom:14px; font-weight:600;">ACTIVE RECALL QUESTION</div>
+                    <div class="flashcard-text" id="fcQuestionText">You have finished your active reviews! Complete tasks inside your checklist to automatically schedule flashcards, or create custom ones in the sidebar. 🚀</div>
+                    <div style="font-size:11px; color:var(--text-muted); font-family:'JetBrains Mono',monospace; letter-spacing:0.02em; margin-top:20px; font-weight:500;">(TAP CARD TO REVEAL EXPLANATION)</div>
+                  </div>
+                  <!-- Back of Card -->
+                  <div class="flashcard-back">
+                    <div style="font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.12em; margin-bottom:14px; font-weight:600;">SCIENTIFIC EXPLANATION</div>
+                    <div class="flashcard-text" id="fcAnswerText">Flashcard answers are stored securely locally.</div>
+                    <div style="font-size:11px; color:var(--text-muted); font-family:'JetBrains Mono',monospace; letter-spacing:0.02em; margin-top:20px; font-weight:500;">(RATE YOUR RECALL QUALITY BELOW)</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Recall Quality Grading Controls (Leitner boxes) -->
+              <div style="display:none; gap:12px; width:100%; max-width:400px; justify-content:center;" id="fcGradingControls">
+                <button class="fc-grade-btn forgot" onclick="gradeRecall(1)" style="flex:1;">
+                  <span class="fc-grade-icon">❌</span>
+                  <div class="fc-grade-label">Forgot</div>
+                </button>
+                <button class="fc-grade-btn struggled" onclick="gradeRecall(2)" style="flex:1;">
+                  <span class="fc-grade-icon">🤔</span>
+                  <div class="fc-grade-label">Struggled</div>
+                </button>
+                <button class="fc-grade-btn nailed" onclick="gradeRecall(3)" style="flex:1;">
+                  <span class="fc-grade-icon">🔥</span>
+                  <div class="fc-grade-label">Nailed It</div>
+                </button>
+              </div>
+
+            </div>
+          </div>
         </div>
       </div>
     </section>
