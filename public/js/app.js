@@ -349,6 +349,7 @@ function shootConfetti() {
 let pomoTimer = null;
 let pomoTimeLeft = 25 * 60;
 let pomoMode = 'work';
+let currentSessionId = null;
 
 function togglePomodoro() {
   const icon = document.getElementById('pomoPlayIcon');
@@ -360,17 +361,69 @@ function togglePomodoro() {
     const playSvg = '<polygon points="5 3 19 12 5 21 5 3"></polygon>';
     if (icon) icon.innerHTML = playSvg;
     if (focusIcon) focusIcon.innerHTML = playSvg;
+    
+    // Save state on pause to trigger immediate cloud sync
+    saveState();
   } else {
     pomoTimer = setInterval(() => {
       pomoTimeLeft--;
+      
+      if (pomoMode === 'work') {
+        // Real-time second-by-second logging
+        if (!currentSessionId) {
+          currentSessionId = 'sess-' + Date.now();
+          if (!appState.studySessions) appState.studySessions = [];
+          appState.studySessions.push({
+            id: currentSessionId,
+            subject: pomoActiveSubject,
+            duration: 0,
+            timestamp: new Date().toISOString()
+          });
+          
+          // Increment heatmap activity count on start
+          const dStr = new Date().toISOString().split('T')[0];
+          if (!appState.heatmap) appState.heatmap = {};
+          appState.heatmap[dStr] = (appState.heatmap[dStr] || 0) + 1;
+        }
+        
+        const sess = appState.studySessions.find(s => s.id === currentSessionId);
+        if (sess) {
+          sess.duration += 1;
+          
+          // Award XP proportionally (1 XP every 75 seconds studied, up to 20 XP in 25 mins)
+          if (sess.duration % 75 === 0) {
+            appState.xp = (appState.xp || 0) + 1;
+            renderDashboard();
+          }
+        }
+        
+        // Fast local save
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+        
+        // Lightweight server syncing every 15 seconds
+        if (pomoTimeLeft % 15 === 0) {
+          syncCloudProgress();
+        }
+      }
+      
       if (pomoTimeLeft <= 0) {
         clearInterval(pomoTimer);
         pomoTimer = null;
         showToast('Session Complete! 🍅');
         if (pomoMode === 'work') {
           shootConfetti();
-          appState.xp = (appState.xp||0)+20;
-          logStudySession(pomoActiveSubject, 25 * 60);
+          // Top up XP to exactly 20 XP for this session if it finished completely
+          const sess = appState.studySessions.find(s => s.id === currentSessionId);
+          if (sess) {
+            const currentXpEarned = Math.floor(sess.duration / 75);
+            const remainderXp = 20 - currentXpEarned;
+            if (remainderXp > 0) {
+              appState.xp = (appState.xp || 0) + remainderXp;
+            }
+          } else {
+            appState.xp = (appState.xp || 0) + 20;
+          }
+          currentSessionId = null;
           saveState();
         }
         const playSvg = '<polygon points="5 3 19 12 5 21 5 3"></polygon>';
@@ -394,19 +447,21 @@ function resetPomodoro() {
     pomoTimer = null;
   }
   
-  const elapsed = (pomoMode === 'work' ? 25 * 60 : 5 * 60) - pomoTimeLeft;
-  if (pomoMode === 'work' && elapsed >= 60) {
-    const mins = Math.floor(elapsed / 60);
-    const secs = elapsed % 60;
-    if (confirm(`You studied for ${mins}m ${secs}s. Would you like to log this partial study session?`)) {
-      const xpEarned = Math.round((elapsed / 1500) * 20) || 1;
-      appState.xp = (appState.xp || 0) + xpEarned;
-      logStudySession(pomoActiveSubject, elapsed);
-      saveState();
-      renderDashboard();
-      showToast(`Logged partial session: +${xpEarned} XP! 🎯`);
+  if (currentSessionId) {
+    const sess = (appState.studySessions || []).find(s => s.id === currentSessionId);
+    if (sess && sess.duration >= 5) {
+      const mins = Math.floor(sess.duration / 60);
+      const secs = sess.duration % 60;
+      showToast(`Saved study session: ${mins}m ${secs}s for ${sess.subject}! 📚`);
+    } else if (sess && sess.duration < 5) {
+      // Discard very short accidental sessions
+      appState.studySessions = appState.studySessions.filter(s => s.id !== currentSessionId);
     }
   }
+  
+  currentSessionId = null;
+  saveState();
+  renderDashboard();
   
   const playSvg = '<polygon points="5 3 19 12 5 21 5 3"></polygon>';
   const icon = document.getElementById('pomoPlayIcon');
