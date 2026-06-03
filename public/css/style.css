@@ -2656,4 +2656,155 @@ body::before {
   color: var(--text-secondary);
 }
 
+/* Nothing Phone Glyph Widget Styling */
+.glyph-card {
+  background: #000000;
+  border: 2px solid #222222;
+  border-radius: 16px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: auto; /* Push it to the bottom of Performance Analytics */
+  box-shadow: 0 0 20px rgba(0,0,0,0.8);
+}
+
+.glyph-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px dotted #333333;
+  padding-bottom: 8px;
+}
+
+.glyph-dot-title {
+  font-family: 'VT323', monospace;
+  font-size: 18px;
+  letter-spacing: 0.1em;
+  color: #f2efe9;
+}
+
+.glyph-status {
+  font-family: 'VT323', monospace;
+  font-size: 15px;
+  color: var(--accent-gold);
+}
+
+.glyph-display-area {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 10px 0;
+  background: #050505;
+  border-radius: 12px;
+  border: 1px solid #111111;
+}
+
+.glyph-svg {
+  width: 100%;
+  max-width: 150px;
+  height: 150px;
+}
+
+.glyph-led {
+  fill: none;
+  stroke: #1c1a17;
+  stroke-width: 8px;
+  transition: all 0.2s ease;
+}
+
+.glyph-led.clickable {
+  cursor: pointer;
+}
+
+.glyph-led.active {
+  stroke: #ffffff;
+  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.9));
+  opacity: var(--glyph-brightness, 0.8);
+}
+
+.glyph-led.active-pulse {
+  animation: glyph-pulse 1.5s infinite ease-in-out;
+}
+
+@keyframes glyph-pulse {
+  0% { stroke: #ffffff; filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.4)); opacity: 0.4; }
+  50% { stroke: #ffffff; filter: drop-shadow(0 0 8px rgba(255, 255, 255, 1)); opacity: 1; }
+  100% { stroke: #ffffff; filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.4)); opacity: 0.4; }
+}
+
+.glyph-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.glyph-mode-btns {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.glyph-btn {
+  background: #111111;
+  border: 1px solid #333333;
+  border-radius: 4px;
+  color: #8c867a;
+  font-family: 'VT323', monospace;
+  font-size: 13px;
+  padding: 6px 2px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.glyph-btn:hover {
+  background: #1c1a17;
+  color: #f2efe9;
+  border-color: #555555;
+}
+
+.glyph-btn.active {
+  background: #ffffff;
+  color: #000000;
+  border-color: #ffffff;
+  font-weight: bold;
+}
+
+.glyph-brightness-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: 'VT323', monospace;
+  font-size: 14px;
+  color: #8c867a;
+}
+
+.glyph-label {
+  letter-spacing: 0.05em;
+}
+
+.glyph-slider {
+  -webkit-appearance: none;
+  width: 100px;
+  height: 4px;
+  background: #222222;
+  border-radius: 2px;
+  outline: none;
+}
+
+.glyph-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 10px;
+  height: 10px;
+  background: #ffffff;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+
+.glyph-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+
 

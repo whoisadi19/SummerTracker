@@ -6,6 +6,18 @@
 const STORAGE_KEY = 'summerStudyHub_v1';
 let appState = loadState();
 
+// ── NOTHING PHONE GLYPH STATE ──
+let glyphMode = 'manual';
+let glyphState = {
+  'glyph-led-1': false,
+  'glyph-led-2': false,
+  'glyph-led-3': false,
+  'glyph-led-4': false,
+  'glyph-led-5': false
+};
+let glyphBrightness = 80;
+let glyphPartyInterval = null;
+
 function loadState() {
   let state = { 
     completed: {}, theme: 'cyber', streak: 0, bestStreak: 0, lastActiveDate: null, xp: 0, heatmap: {}, notes: {}, checklistData: null
@@ -716,6 +728,8 @@ function updatePomodoroUI() {
     const circumference = 2 * Math.PI * 90;
     focusRing.style.strokeDashoffset = circumference - (pct / 100) * circumference;
   }
+
+  if (typeof syncGlyphWithTimer === 'function') syncGlyphWithTimer();
 }
 
 // ── ACTION: ENTER FOCUS MODE ──
@@ -924,6 +938,8 @@ function renderDashboard() {
 
   document.getElementById('xpText').textContent = `${currentXP} / 100 XP`;
   document.getElementById('xpBar').style.width = currentXP + '%';
+
+  if (typeof syncGlyphWithProgress === 'function') syncGlyphWithProgress();
 
   renderHeatmap();
   // updatePomodoroUI(); (handled in Pomodoro tab)
@@ -2025,6 +2041,7 @@ function init() {
   initTheme();
   renderDashboard();
   renderUserWidget();
+  initGlyphInterface();
   
   if (appState.user) {
     fetchCloudProgress();
@@ -2049,3 +2066,178 @@ if (document.readyState === 'loading') {
 } else {
   init();
 }
+
+// ── NOTHING PHONE GLYPH INTERFACE LOGIC ──
+function initGlyphInterface() {
+  const leds = document.querySelectorAll('.glyph-led');
+  leds.forEach(led => {
+    led.addEventListener('click', () => {
+      if (glyphMode === 'manual') {
+        const id = led.id;
+        glyphState[id] = !glyphState[id];
+        updateGlyphDisplay();
+      }
+    });
+  });
+  
+  // Set initial brightness variable
+  document.documentElement.style.setProperty('--glyph-brightness', glyphBrightness / 100);
+  updateGlyphDisplay();
+}
+
+function setGlyphMode(mode) {
+  glyphMode = mode;
+  
+  // Update button active states
+  document.querySelectorAll('.glyph-btn').forEach(btn => {
+    btn.classList.remove('active');
+  });
+  
+  const statusEl = document.getElementById('glyphStatus');
+  if (statusEl) {
+    statusEl.textContent = `MODE: ${mode.toUpperCase()}`;
+  }
+  
+  if (mode === 'manual') {
+    document.getElementById('glyphModeBtnManual')?.classList.add('active');
+    clearInterval(glyphPartyInterval);
+    glyphPartyInterval = null;
+    updateGlyphDisplay();
+  } else if (mode === 'timer') {
+    document.getElementById('glyphModeBtnTimer')?.classList.add('active');
+    clearInterval(glyphPartyInterval);
+    glyphPartyInterval = null;
+    syncGlyphWithTimer();
+  } else if (mode === 'xp') {
+    document.getElementById('glyphModeBtnXp')?.classList.add('active');
+    clearInterval(glyphPartyInterval);
+    glyphPartyInterval = null;
+    syncGlyphWithProgress();
+  } else if (mode === 'party') {
+    document.getElementById('glyphModeBtnParty')?.classList.add('active');
+    startGlyphParty();
+  }
+}
+
+function changeGlyphBrightness(val) {
+  glyphBrightness = val;
+  document.documentElement.style.setProperty('--glyph-brightness', val / 100);
+  
+  // Update filter brightness
+  const activeLeds = document.querySelectorAll('.glyph-led.active');
+  activeLeds.forEach(led => {
+    led.style.filter = `drop-shadow(0 0 ${Math.round(val/10)}px rgba(255, 255, 255, ${val/100}))`;
+  });
+}
+
+function updateGlyphDisplay() {
+  const leds = document.querySelectorAll('.glyph-led');
+  leds.forEach(led => {
+    const id = led.id;
+    const isActive = glyphState[id];
+    led.classList.toggle('active', isActive);
+    led.classList.remove('active-pulse');
+    
+    if (isActive) {
+      led.style.filter = `drop-shadow(0 0 ${Math.round(glyphBrightness/10)}px rgba(255, 255, 255, ${glyphBrightness/100}))`;
+      led.style.opacity = glyphBrightness / 100;
+    } else {
+      led.style.filter = 'none';
+      led.style.opacity = 1;
+    }
+  });
+}
+
+function syncGlyphWithTimer() {
+  if (glyphMode !== 'timer') return;
+  
+  // Calculate percentage
+  let pct = 0;
+  if (timerIsRunning) {
+    if (timerMode === 'pomodoro') {
+      const total = 25 * 60;
+      pct = ((total - pomoTimeLeft) / total) * 100;
+    } else {
+      const targetSeconds = getCustomTargetSeconds();
+      if (targetSeconds > 0) {
+        pct = (pomoTimeLeft / targetSeconds) * 100;
+      } else {
+        pct = (pomoTimeLeft % 60) / 60 * 100;
+      }
+    }
+  } else if (pomoTimeLeft > 0) {
+    // If paused, keep progress but don't pulse
+    if (timerMode === 'pomodoro') {
+      pct = ((25 * 60 - pomoTimeLeft) / (25 * 60)) * 100;
+    } else {
+      const targetSeconds = getCustomTargetSeconds();
+      if (targetSeconds > 0) {
+        pct = (pomoTimeLeft / targetSeconds) * 100;
+      } else {
+        pct = (pomoTimeLeft % 60) / 60 * 100;
+      }
+    }
+  }
+  
+  // LEDs mapping:
+  // LED 4 (Central ring) pulses when timer is running, solid if paused, off if not active
+  const led4 = document.getElementById('glyph-led-4');
+  if (led4) {
+    if (timerIsRunning) {
+      led4.classList.add('active', 'active-pulse');
+      led4.style.filter = `drop-shadow(0 0 ${Math.round(glyphBrightness/10)}px rgba(255, 255, 255, ${glyphBrightness/100}))`;
+    } else {
+      led4.classList.remove('active-pulse');
+      led4.classList.toggle('active', pomoTimeLeft > 0);
+    }
+  }
+  
+  glyphState['glyph-led-5'] = pct >= 20;
+  glyphState['glyph-led-3'] = pct >= 50;
+  glyphState['glyph-led-1'] = pct >= 75;
+  glyphState['glyph-led-2'] = pct >= 95;
+  
+  const otherLeds = ['glyph-led-1', 'glyph-led-2', 'glyph-led-3', 'glyph-led-5'];
+  otherLeds.forEach(id => {
+    const led = document.getElementById(id);
+    if (led) {
+      const active = glyphState[id];
+      led.classList.toggle('active', active);
+      if (active) {
+        led.style.filter = `drop-shadow(0 0 ${Math.round(glyphBrightness/10)}px rgba(255, 255, 255, ${glyphBrightness/100}))`;
+        led.style.opacity = glyphBrightness / 100;
+      } else {
+        led.style.filter = 'none';
+        led.style.opacity = 1;
+      }
+    }
+  });
+}
+
+function syncGlyphWithProgress() {
+  if (glyphMode !== 'xp') return;
+  
+  const progress = getProgress();
+  const pct = progress.overall.pct;
+  
+  glyphState['glyph-led-5'] = pct >= 15;
+  glyphState['glyph-led-4'] = pct >= 35;
+  glyphState['glyph-led-3'] = pct >= 55;
+  glyphState['glyph-led-1'] = pct >= 75;
+  glyphState['glyph-led-2'] = pct >= 95;
+  
+  updateGlyphDisplay();
+}
+
+function startGlyphParty() {
+  clearInterval(glyphPartyInterval);
+  
+  glyphPartyInterval = setInterval(() => {
+    const leds = ['glyph-led-1', 'glyph-led-2', 'glyph-led-3', 'glyph-led-4', 'glyph-led-5'];
+    leds.forEach(id => {
+      glyphState[id] = Math.random() > 0.5;
+    });
+    updateGlyphDisplay();
+  }, 180);
+}
+
