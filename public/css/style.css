@@ -2695,42 +2695,34 @@ body::before {
   justify-content: center;
   align-items: center;
   padding: 10px 0;
-  background: #050505;
-  border-radius: 12px;
-  border: 1px solid #111111;
+  background: #000000;
 }
 
-.glyph-svg {
-  width: 100%;
-  max-width: 150px;
-  height: 150px;
+.glyph-matrix-container {
+  width: 170px;
+  height: 170px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: repeat(15, 1fr);
+  grid-template-rows: repeat(15, 1fr);
+  gap: 2px;
+  padding: 12px;
+  background: #000000;
+  border: 4px solid #1c1a17;
+  box-shadow: inset 0 0 12px rgba(0,0,0,0.9);
+  user-select: none;
 }
 
-.glyph-led {
-  fill: none;
-  stroke: #1c1a17;
-  stroke-width: 8px;
-  transition: all 0.2s ease;
+.glyph-pixel {
+  background: #11100f;
+  border-radius: 1px;
+  transition: background 0.1s ease, box-shadow 0.1s ease;
 }
 
-.glyph-led.clickable {
-  cursor: pointer;
-}
-
-.glyph-led.active {
-  stroke: #ffffff;
-  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.9));
-  opacity: var(--glyph-brightness, 0.8);
-}
-
-.glyph-led.active-pulse {
-  animation: glyph-pulse 1.5s infinite ease-in-out;
-}
-
-@keyframes glyph-pulse {
-  0% { stroke: #ffffff; filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.4)); opacity: 0.4; }
-  50% { stroke: #ffffff; filter: drop-shadow(0 0 8px rgba(255, 255, 255, 1)); opacity: 1; }
-  100% { stroke: #ffffff; filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.4)); opacity: 0.4; }
+.glyph-pixel.active {
+  background: #ffffff !important;
+  box-shadow: 0 0 6px #ffffff, 0 0 12px rgba(255, 255, 255, 0.7);
 }
 
 .glyph-controls {

@@ -7,16 +7,13 @@ const STORAGE_KEY = 'summerStudyHub_v1';
 let appState = loadState();
 
 // ── NOTHING PHONE GLYPH STATE ──
-let glyphMode = 'manual';
-let glyphState = {
-  'glyph-led-1': false,
-  'glyph-led-2': false,
-  'glyph-led-3': false,
-  'glyph-led-4': false,
-  'glyph-led-5': false
-};
+let glyphMode = 'draw';
+let glyphState = Array(225).fill(false); // 15x15 grid
 let glyphBrightness = 80;
-let glyphPartyInterval = null;
+let glyphAnimateInterval = null;
+let isDrawing = false;
+let drawMode = true; // true = draw, false = erase
+
 
 function loadState() {
   let state = { 
@@ -2069,53 +2066,168 @@ if (document.readyState === 'loading') {
 
 // ── NOTHING PHONE GLYPH INTERFACE LOGIC ──
 function initGlyphInterface() {
-  const leds = document.querySelectorAll('.glyph-led');
-  leds.forEach(led => {
-    led.addEventListener('click', () => {
-      if (glyphMode === 'manual') {
-        const id = led.id;
-        glyphState[id] = !glyphState[id];
-        updateGlyphDisplay();
+  const matrix = document.getElementById('glyphMatrix');
+  if (!matrix) return;
+  
+  matrix.innerHTML = '';
+  
+  // Track globally when mouse is released
+  document.addEventListener('mouseup', () => {
+    isDrawing = false;
+  });
+  
+  for (let i = 0; i < 225; i++) {
+    const pixel = document.createElement('div');
+    pixel.className = 'glyph-pixel';
+    pixel.dataset.index = i;
+    
+    // Bounded check to mask grid cells out of the circle
+    const row = Math.floor(i / 15);
+    const col = i % 15;
+    const dx = col - 7;
+    const dy = row - 7;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    
+    if (dist > 7.4) {
+      pixel.style.visibility = 'hidden';
+    }
+    
+    // Draw / Erase drag handlers
+    pixel.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      if (glyphMode !== 'draw') return;
+      isDrawing = true;
+      drawMode = !glyphState[i];
+      setPixelState(i, drawMode);
+    });
+    
+    pixel.addEventListener('mouseenter', () => {
+      if (isDrawing && glyphMode === 'draw') {
+        setPixelState(i, drawMode);
       }
     });
-  });
+    
+    matrix.appendChild(pixel);
+  }
+  
+  // Load default Community Arrow preset on start
+  loadGlyphPreset('arrow');
   
   // Set initial brightness variable
   document.documentElement.style.setProperty('--glyph-brightness', glyphBrightness / 100);
-  updateGlyphDisplay();
+}
+
+function setPixelState(index, active) {
+  glyphState[index] = active;
+  const pixel = document.querySelector(`.glyph-pixel[data-index="${index}"]`);
+  if (pixel) {
+    pixel.classList.toggle('active', active);
+    if (active) {
+      pixel.style.opacity = glyphBrightness / 100;
+      pixel.style.boxShadow = `0 0 ${Math.round(glyphBrightness/10)}px #ffffff`;
+    } else {
+      pixel.style.opacity = 1;
+      pixel.style.boxShadow = 'none';
+    }
+  }
+}
+
+function clearGlyphMatrix() {
+  for (let i = 0; i < 225; i++) {
+    setPixelState(i, false);
+  }
+  if (document.getElementById('glyphPresetSelect')) {
+    document.getElementById('glyphPresetSelect').value = 'clear';
+  }
+}
+
+function loadGlyphPreset(preset) {
+  clearGlyphMatrix();
+  if (preset === 'clear') return;
+  
+  let activeIndices = [];
+  
+  if (preset === 'arrow') {
+    // Center column shaft:
+    for (let r = 2; r <= 7; r++) activeIndices.push(r * 15 + 7);
+    // Triangle head:
+    for (let c = 7 - 0; c <= 7 + 0; c++) activeIndices.push(8 * 15 + c);
+    for (let c = 7 - 1; c <= 7 + 1; c++) activeIndices.push(9 * 15 + c);
+    for (let c = 7 - 2; c <= 7 + 2; c++) activeIndices.push(10 * 15 + c);
+    for (let c = 7 - 3; c <= 7 + 3; c++) activeIndices.push(11 * 15 + c);
+    for (let c = 7 - 4; c <= 7 + 4; c++) activeIndices.push(12 * 15 + c);
+    for (let c = 7 - 5; c <= 7 + 5; c++) activeIndices.push(13 * 15 + c);
+    for (let c = 7 - 6; c <= 7 + 6; c++) activeIndices.push(14 * 15 + c);
+  } else if (preset === 'heart') {
+    const heartRows = {
+      2: [4, 5, 9, 10],
+      3: [3, 4, 5, 6, 8, 9, 10, 11],
+      4: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+      5: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+      6: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+      7: [3, 4, 5, 6, 7, 8, 9, 10, 11],
+      8: [4, 5, 6, 7, 8, 9, 10],
+      9: [5, 6, 7, 8, 9],
+      10: [6, 7, 8],
+      11: [7]
+    };
+    Object.keys(heartRows).forEach(r => {
+      const row = parseInt(r);
+      heartRows[row].forEach(c => activeIndices.push(row * 15 + c));
+    });
+  } else if (preset === 'smile') {
+    // Eyes:
+    activeIndices.push(4 * 15 + 4, 4 * 15 + 10);
+    activeIndices.push(5 * 15 + 4, 5 * 15 + 10);
+    // Smile mouth:
+    activeIndices.push(8 * 15 + 3, 8 * 15 + 11);
+    activeIndices.push(9 * 15 + 4, 9 * 15 + 10);
+    for (let c = 5; c <= 9; c++) activeIndices.push(10 * 15 + c);
+  } else if (preset === 'check') {
+    // Giant checkmark
+    const checkCoords = [
+      [8, 2], [9, 3], [10, 4], [11, 5],
+      [10, 6], [9, 7], [8, 8], [7, 9], [6, 10], [5, 11], [4, 12], [3, 13]
+    ];
+    checkCoords.forEach(([r, c]) => {
+      activeIndices.push(r * 15 + c);
+      activeIndices.push((r - 1) * 15 + c);
+    });
+  } else if (preset === 'custom1') {
+    // Horizontal sound wave
+    for (let c = 0; c < 15; c++) {
+      const ht = Math.round(3 + Math.sin(c * 0.8) * 3);
+      for (let offset = 0; offset <= ht; offset++) {
+        activeIndices.push((7 - offset) * 15 + c);
+        activeIndices.push((7 + offset) * 15 + c);
+      }
+    }
+  }
+  
+  activeIndices.forEach(idx => {
+    if (idx >= 0 && idx < 225) setPixelState(idx, true);
+  });
 }
 
 function setGlyphMode(mode) {
   glyphMode = mode;
   
-  // Update button active states
-  document.querySelectorAll('.glyph-btn').forEach(btn => {
-    btn.classList.remove('active');
-  });
+  clearInterval(glyphAnimateInterval);
+  glyphAnimateInterval = null;
   
+  document.querySelectorAll('.glyph-btn').forEach(btn => btn.classList.remove('active'));
   const statusEl = document.getElementById('glyphStatus');
-  if (statusEl) {
-    statusEl.textContent = `MODE: ${mode.toUpperCase()}`;
-  }
+  if (statusEl) statusEl.textContent = `MODE: ${mode.toUpperCase()}`;
   
-  if (mode === 'manual') {
-    document.getElementById('glyphModeBtnManual')?.classList.add('active');
-    clearInterval(glyphPartyInterval);
-    glyphPartyInterval = null;
-    updateGlyphDisplay();
+  if (mode === 'draw') {
+    document.getElementById('glyphModeBtnDraw')?.classList.add('active');
+    loadGlyphPreset('arrow');
   } else if (mode === 'timer') {
     document.getElementById('glyphModeBtnTimer')?.classList.add('active');
-    clearInterval(glyphPartyInterval);
-    glyphPartyInterval = null;
     syncGlyphWithTimer();
-  } else if (mode === 'xp') {
-    document.getElementById('glyphModeBtnXp')?.classList.add('active');
-    clearInterval(glyphPartyInterval);
-    glyphPartyInterval = null;
-    syncGlyphWithProgress();
   } else if (mode === 'party') {
     document.getElementById('glyphModeBtnParty')?.classList.add('active');
-    startGlyphParty();
+    startGlyphAnimation();
   }
 }
 
@@ -2123,35 +2235,22 @@ function changeGlyphBrightness(val) {
   glyphBrightness = val;
   document.documentElement.style.setProperty('--glyph-brightness', val / 100);
   
-  // Update filter brightness
-  const activeLeds = document.querySelectorAll('.glyph-led.active');
-  activeLeds.forEach(led => {
-    led.style.filter = `drop-shadow(0 0 ${Math.round(val/10)}px rgba(255, 255, 255, ${val/100}))`;
-  });
-}
-
-function updateGlyphDisplay() {
-  const leds = document.querySelectorAll('.glyph-led');
-  leds.forEach(led => {
-    const id = led.id;
-    const isActive = glyphState[id];
-    led.classList.toggle('active', isActive);
-    led.classList.remove('active-pulse');
-    
-    if (isActive) {
-      led.style.filter = `drop-shadow(0 0 ${Math.round(glyphBrightness/10)}px rgba(255, 255, 255, ${glyphBrightness/100}))`;
-      led.style.opacity = glyphBrightness / 100;
-    } else {
-      led.style.filter = 'none';
-      led.style.opacity = 1;
+  for (let i = 0; i < 225; i++) {
+    if (glyphState[i]) {
+      const pixel = document.querySelector(`.glyph-pixel[data-index="${i}"]`);
+      if (pixel) {
+        pixel.style.opacity = val / 100;
+        pixel.style.boxShadow = `0 0 ${Math.round(val/10)}px #ffffff`;
+      }
     }
-  });
+  }
 }
 
 function syncGlyphWithTimer() {
   if (glyphMode !== 'timer') return;
   
-  // Calculate percentage
+  clearGlyphMatrix();
+  
   let pct = 0;
   if (timerIsRunning) {
     if (timerMode === 'pomodoro') {
@@ -2166,7 +2265,6 @@ function syncGlyphWithTimer() {
       }
     }
   } else if (pomoTimeLeft > 0) {
-    // If paused, keep progress but don't pulse
     if (timerMode === 'pomodoro') {
       pct = ((25 * 60 - pomoTimeLeft) / (25 * 60)) * 100;
     } else {
@@ -2179,65 +2277,80 @@ function syncGlyphWithTimer() {
     }
   }
   
-  // LEDs mapping:
-  // LED 4 (Central ring) pulses when timer is running, solid if paused, off if not active
-  const led4 = document.getElementById('glyph-led-4');
-  if (led4) {
-    if (timerIsRunning) {
-      led4.classList.add('active', 'active-pulse');
-      led4.style.filter = `drop-shadow(0 0 ${Math.round(glyphBrightness/10)}px rgba(255, 255, 255, ${glyphBrightness/100}))`;
-    } else {
-      led4.classList.remove('active-pulse');
-      led4.classList.toggle('active', pomoTimeLeft > 0);
+  let perimeterPixels = [];
+  
+  for (let i = 0; i < 225; i++) {
+    const row = Math.floor(i / 15);
+    const col = i % 15;
+    const dx = col - 7;
+    const dy = row - 7;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    
+    if (dist >= 6.0 && dist <= 7.3) {
+      const angle = Math.atan2(dy, dx);
+      perimeterPixels.push({ index: i, angle });
     }
   }
   
-  glyphState['glyph-led-5'] = pct >= 20;
-  glyphState['glyph-led-3'] = pct >= 50;
-  glyphState['glyph-led-1'] = pct >= 75;
-  glyphState['glyph-led-2'] = pct >= 95;
-  
-  const otherLeds = ['glyph-led-1', 'glyph-led-2', 'glyph-led-3', 'glyph-led-5'];
-  otherLeds.forEach(id => {
-    const led = document.getElementById(id);
-    if (led) {
-      const active = glyphState[id];
-      led.classList.toggle('active', active);
-      if (active) {
-        led.style.filter = `drop-shadow(0 0 ${Math.round(glyphBrightness/10)}px rgba(255, 255, 255, ${glyphBrightness/100}))`;
-        led.style.opacity = glyphBrightness / 100;
-      } else {
-        led.style.filter = 'none';
-        led.style.opacity = 1;
-      }
-    }
+  perimeterPixels.sort((a, b) => {
+    let angA = a.angle + Math.PI/2;
+    if (angA < 0) angA += 2 * Math.PI;
+    let angB = b.angle + Math.PI/2;
+    if (angB < 0) angB += 2 * Math.PI;
+    return angA - angB;
   });
+  
+  const lightLimit = Math.min(perimeterPixels.length, Math.max(0, Math.round((pct / 100) * perimeterPixels.length)));
+  for (let j = 0; j < lightLimit; j++) {
+    setPixelState(perimeterPixels[j].index, true);
+  }
+  
+  if (timerIsRunning) {
+    const centerIndices = [
+      6 * 15 + 6, 6 * 15 + 7, 6 * 15 + 8,
+      7 * 15 + 6, 7 * 15 + 7, 7 * 15 + 8,
+      8 * 15 + 6, 8 * 15 + 7, 8 * 15 + 8
+    ];
+    const isOddSecond = Math.floor(Date.now() / 1000) % 2 === 0;
+    centerIndices.forEach(idx => {
+      setPixelState(idx, isOddSecond);
+    });
+  }
 }
 
 function syncGlyphWithProgress() {
-  if (glyphMode !== 'xp') return;
-  
-  const progress = getProgress();
-  const pct = progress.overall.pct;
-  
-  glyphState['glyph-led-5'] = pct >= 15;
-  glyphState['glyph-led-4'] = pct >= 35;
-  glyphState['glyph-led-3'] = pct >= 55;
-  glyphState['glyph-led-1'] = pct >= 75;
-  glyphState['glyph-led-2'] = pct >= 95;
-  
-  updateGlyphDisplay();
+  if (glyphMode !== 'timer' && glyphMode !== 'party') {
+    // Left empty for draw mode priority
+  }
 }
 
-function startGlyphParty() {
-  clearInterval(glyphPartyInterval);
+function startGlyphAnimation() {
+  let step = 0;
   
-  glyphPartyInterval = setInterval(() => {
-    const leds = ['glyph-led-1', 'glyph-led-2', 'glyph-led-3', 'glyph-led-4', 'glyph-led-5'];
-    leds.forEach(id => {
-      glyphState[id] = Math.random() > 0.5;
-    });
-    updateGlyphDisplay();
-  }, 180);
+  glyphAnimateInterval = setInterval(() => {
+    clearGlyphMatrix();
+    
+    for (let c = 0; c < 15; c++) {
+      const rawHt = 4 + Math.sin(c * 0.7 + step * 0.4) * 4;
+      const ht = Math.round(rawHt);
+      for (let offset = 0; offset <= ht; offset++) {
+        const idxTop = (7 - offset) * 15 + c;
+        const idxBottom = (7 + offset) * 15 + c;
+        
+        const dxTop = c - 7;
+        const dyTop = (7 - offset) - 7;
+        if (Math.sqrt(dxTop*dxTop + dyTop*dyTop) <= 7.2) {
+          setPixelState(idxTop, true);
+        }
+        
+        const dxBot = c - 7;
+        const dyBot = (7 + offset) - 7;
+        if (Math.sqrt(dxBot*dxBot + dyBot*dyBot) <= 7.2) {
+          setPixelState(idxBottom, true);
+        }
+      }
+    }
+    step++;
+  }, 100);
 }
 
