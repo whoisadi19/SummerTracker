@@ -54,6 +54,14 @@ const ProgressSchema = new mongoose.Schema({
     type: Array,
     default: []
   },
+  quickNotes: {
+    type: String,
+    default: ''
+  },
+  quickNotesPinned: {
+    type: Boolean,
+    default: false
+  },
   updatedAt: {
     type: Date,
     default: Date.now

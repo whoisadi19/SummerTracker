@@ -2656,146 +2656,168 @@ body::before {
   color: var(--text-secondary);
 }
 
-/* Nothing Phone Glyph Widget Styling */
-.glyph-card {
-  background: #000000;
-  border: 2px solid #222222;
+/* Quick Notes & Code Scratchpad Styling */
+.scratchpad-card {
+  background: #11100e; /* Sleek absolute dark background */
+  border: 1px solid #2d2922;
   border-radius: 16px;
-  padding: 20px;
+  padding: 14px 16px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 10px;
   margin-top: auto; /* Push it to the bottom of Performance Analytics */
-  box-shadow: 0 0 20px rgba(0,0,0,0.8);
+  box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.6), 0 4px 20px rgba(0, 0, 0, 0.5);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
 }
 
-.glyph-card-header {
+/* Cyber theme specific refinement */
+[data-theme="cyber"] .scratchpad-card {
+  border-color: #3b3730;
+}
+
+/* Pinned state styling: neon border glow and subtle animation indicator */
+.scratchpad-card.pinned {
+  border-color: var(--accent-dsa);
+  box-shadow: 0 0 15px rgba(224, 108, 83, 0.15), inset 0 0 15px rgba(0, 0, 0, 0.8);
+}
+
+.scratchpad-card.pinned::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: var(--accent-dsa);
+  box-shadow: 0 0 8px var(--accent-dsa);
+}
+
+.scratchpad-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px dotted #333333;
+  border-bottom: 1px solid #23201a;
   padding-bottom: 8px;
 }
 
-.glyph-dot-title {
-  font-family: 'VT323', monospace;
-  font-size: 18px;
-  letter-spacing: 0.1em;
-  color: #f2efe9;
+[data-theme="cyber"] .scratchpad-header {
+  border-bottom-color: #2b2823;
 }
 
-.glyph-status {
-  font-family: 'VT323', monospace;
-  font-size: 15px;
-  color: var(--accent-gold);
-}
-
-.glyph-display-area {
+.scratchpad-title {
   display: flex;
-  justify-content: center;
   align-items: center;
-  padding: 10px 0;
-  background: #000000;
+  gap: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  color: #c9c3b8; /* Fixed color to stand out in the dark box */
+  text-transform: uppercase;
 }
 
-.glyph-matrix-container {
-  width: 170px;
-  height: 170px;
+.scratchpad-dot {
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
-  overflow: hidden;
-  display: grid;
-  grid-template-columns: repeat(15, 1fr);
-  grid-template-rows: repeat(15, 1fr);
-  gap: 2px;
-  padding: 12px;
-  background: #000000;
-  border: 4px solid #1c1a17;
-  box-shadow: inset 0 0 12px rgba(0,0,0,0.9);
-  user-select: none;
+  background: #c9c3b8;
+  transition: background 0.3s ease, box-shadow 0.3s ease;
 }
 
-.glyph-pixel {
-  background: #11100f;
-  border-radius: 1px;
-  transition: background 0.1s ease, box-shadow 0.1s ease;
+.scratchpad-card.pinned .scratchpad-dot {
+  background: var(--accent-dsa);
+  box-shadow: 0 0 6px var(--accent-dsa);
 }
 
-.glyph-pixel.active {
-  background: #ffffff !important;
-  box-shadow: 0 0 6px #ffffff, 0 0 12px rgba(255, 255, 255, 0.7);
-}
-
-.glyph-controls {
+.scratchpad-actions {
   display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.glyph-mode-btns {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
   gap: 6px;
 }
 
-.glyph-btn {
-  background: #111111;
-  border: 1px solid #333333;
-  border-radius: 4px;
+.scratchpad-btn {
+  background: #1a1815;
+  border: 1px solid #332f27;
+  border-radius: 6px;
   color: #8c867a;
-  font-family: 'VT323', monospace;
-  font-size: 13px;
-  padding: 6px 2px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  font-weight: 500;
+  padding: 4px 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
-.glyph-btn:hover {
-  background: #1c1a17;
+.scratchpad-btn:hover {
+  background: #24211d;
   color: #f2efe9;
-  border-color: #555555;
+  border-color: #4a443a;
 }
 
-.glyph-btn.active {
-  background: #ffffff;
-  color: #000000;
-  border-color: #ffffff;
-  font-weight: bold;
+.scratchpad-btn svg {
+  transition: transform 0.2s ease;
 }
 
-.glyph-brightness-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-family: 'VT323', monospace;
-  font-size: 14px;
-  color: #8c867a;
+.scratchpad-btn:active svg {
+  transform: scale(0.9);
 }
 
-.glyph-label {
-  letter-spacing: 0.05em;
+/* Copy success state */
+.scratchpad-btn.success {
+  background: rgba(82, 143, 196, 0.1);
+  color: var(--accent-ml);
+  border-color: rgba(82, 143, 196, 0.3);
 }
 
-.glyph-slider {
-  -webkit-appearance: none;
-  width: 100px;
-  height: 4px;
-  background: #222222;
-  border-radius: 2px;
+/* Pin active state */
+.scratchpad-btn.active {
+  background: rgba(224, 108, 83, 0.1);
+  color: var(--accent-dsa);
+  border-color: rgba(224, 108, 83, 0.3);
+}
+
+.scratchpad-body {
+  position: relative;
+  width: 100%;
+}
+
+#quickNotesTextarea {
+  width: 100%;
+  height: 140px;
+  background: transparent;
+  border: none;
+  resize: vertical;
   outline: none;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: #e0ded8; /* Monospace text color */
+  padding: 2px 0;
+  caret-color: var(--accent-dsa);
+  tab-size: 4;
 }
 
-.glyph-slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 10px;
-  height: 10px;
-  background: #ffffff;
-  border-radius: 50%;
-  cursor: pointer;
-  transition: transform 0.1s;
+/* Custom scrollbar for notepad textarea */
+#quickNotesTextarea::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
 }
 
-.glyph-slider::-webkit-slider-thumb:hover {
-  transform: scale(1.2);
+#quickNotesTextarea::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#quickNotesTextarea::-webkit-scrollbar-thumb {
+  background: #2b2823;
+  border-radius: 3px;
+}
+
+#quickNotesTextarea::-webkit-scrollbar-thumb:hover {
+  background: #3b3730;
 }
 
 

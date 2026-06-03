@@ -6,22 +6,19 @@
 const STORAGE_KEY = 'summerStudyHub_v1';
 let appState = loadState();
 
-// ── NOTHING PHONE GLYPH STATE ──
-let glyphMode = 'draw';
-let glyphState = Array(225).fill(false); // 15x15 grid
-let glyphBrightness = 80;
-let glyphAnimateInterval = null;
-let isDrawing = false;
-let drawMode = true; // true = draw, false = erase
 
 
 function loadState() {
   let state = { 
-    completed: {}, theme: 'cyber', streak: 0, bestStreak: 0, lastActiveDate: null, xp: 0, heatmap: {}, notes: {}, checklistData: null
+    completed: {}, theme: 'cyber', streak: 0, bestStreak: 0, lastActiveDate: null, xp: 0, heatmap: {}, notes: {}, checklistData: null,
+    quickNotes: '', quickNotesPinned: false
   };
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) state = JSON.parse(raw);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      state = { ...state, ...parsed };
+    }
   } catch (e) {}
   
   // Load Auth Session
@@ -64,7 +61,9 @@ async function syncCloudProgress() {
         theme: appState.theme,
         studySessions: appState.studySessions,
         subjects: appState.subjects,
-        customResources: appState.customResources
+        customResources: appState.customResources,
+        quickNotes: appState.quickNotes,
+        quickNotesPinned: appState.quickNotesPinned
       })
     });
     if (res.status === 403) {
@@ -100,7 +99,9 @@ async function fetchCloudProgress() {
       appState.heatmap = { ...(appState.heatmap || {}), ...(cloudData.heatmap || {}) };
       appState.notes = { ...(appState.notes || {}), ...(cloudData.notes || {}) };
       
-      if (cloudData.theme) appState.theme = cloudData.theme;
+       if (cloudData.theme) appState.theme = cloudData.theme;
+      if (cloudData.quickNotes !== undefined) appState.quickNotes = cloudData.quickNotes;
+      if (cloudData.quickNotesPinned !== undefined) appState.quickNotesPinned = cloudData.quickNotesPinned;
 
       // Safe merge studySessions by ID
       const localSessions = appState.studySessions || [];
@@ -131,6 +132,7 @@ async function fetchCloudProgress() {
       if (currentView === 'checklist') renderChecklist();
       else if (currentView === 'schedule') renderSchedule();
       
+      syncQuickNotesUI();
       renderUserWidget();
     } else if (res.status === 403) {
       logout(true);
@@ -725,8 +727,6 @@ function updatePomodoroUI() {
     const circumference = 2 * Math.PI * 90;
     focusRing.style.strokeDashoffset = circumference - (pct / 100) * circumference;
   }
-
-  if (typeof syncGlyphWithTimer === 'function') syncGlyphWithTimer();
 }
 
 // ── ACTION: ENTER FOCUS MODE ──
@@ -935,8 +935,6 @@ function renderDashboard() {
 
   document.getElementById('xpText').textContent = `${currentXP} / 100 XP`;
   document.getElementById('xpBar').style.width = currentXP + '%';
-
-  if (typeof syncGlyphWithProgress === 'function') syncGlyphWithProgress();
 
   renderHeatmap();
   // updatePomodoroUI(); (handled in Pomodoro tab)
@@ -2038,7 +2036,7 @@ function init() {
   initTheme();
   renderDashboard();
   renderUserWidget();
-  initGlyphInterface();
+  initQuickNotes();
   
   if (appState.user) {
     fetchCloudProgress();
@@ -2064,293 +2062,111 @@ if (document.readyState === 'loading') {
   init();
 }
 
-// ── NOTHING PHONE GLYPH INTERFACE LOGIC ──
-function initGlyphInterface() {
-  const matrix = document.getElementById('glyphMatrix');
-  if (!matrix) return;
+// ── QUICK NOTES & CODE SCRATCHPAD LOGIC ──
+let quickNotesDebounceTimeout = null;
+
+function initQuickNotes() {
+  const textarea = document.getElementById('quickNotesTextarea');
+  if (!textarea) return;
+
+  // Load initial values from state
+  textarea.value = appState.quickNotes || '';
   
-  matrix.innerHTML = '';
-  
-  // Track globally when mouse is released
-  document.addEventListener('mouseup', () => {
-    isDrawing = false;
-  });
-  
-  for (let i = 0; i < 225; i++) {
-    const pixel = document.createElement('div');
-    pixel.className = 'glyph-pixel';
-    pixel.dataset.index = i;
-    
-    // Bounded check to mask grid cells out of the circle
-    const row = Math.floor(i / 15);
-    const col = i % 15;
-    const dx = col - 7;
-    const dy = row - 7;
-    const dist = Math.sqrt(dx*dx + dy*dy);
-    
-    if (dist > 7.4) {
-      pixel.style.visibility = 'hidden';
-    }
-    
-    // Draw / Erase drag handlers
-    pixel.addEventListener('mousedown', (e) => {
+  // Apply pin state class and button state
+  syncQuickNotesUI();
+
+  // Listen for keydown to handle Tab indentation
+  textarea.addEventListener('keydown', (e) => {
+    if (e.key === 'Tab') {
       e.preventDefault();
-      if (glyphMode !== 'draw') return;
-      isDrawing = true;
-      drawMode = !glyphState[i];
-      setPixelState(i, drawMode);
-    });
-    
-    pixel.addEventListener('mouseenter', () => {
-      if (isDrawing && glyphMode === 'draw') {
-        setPixelState(i, drawMode);
-      }
-    });
-    
-    matrix.appendChild(pixel);
-  }
-  
-  // Load default Community Arrow preset on start
-  loadGlyphPreset('arrow');
-  
-  // Set initial brightness variable
-  document.documentElement.style.setProperty('--glyph-brightness', glyphBrightness / 100);
-}
-
-function setPixelState(index, active) {
-  glyphState[index] = active;
-  const pixel = document.querySelector(`.glyph-pixel[data-index="${index}"]`);
-  if (pixel) {
-    pixel.classList.toggle('active', active);
-    if (active) {
-      pixel.style.opacity = glyphBrightness / 100;
-      pixel.style.boxShadow = `0 0 ${Math.round(glyphBrightness/10)}px #ffffff`;
-    } else {
-      pixel.style.opacity = 1;
-      pixel.style.boxShadow = 'none';
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const val = textarea.value;
+      textarea.value = val.substring(0, start) + '    ' + val.substring(end);
+      textarea.selectionStart = textarea.selectionEnd = start + 4;
+      
+      // Trigger input event to auto-save
+      handleQuickNotesInput({ target: textarea });
     }
-  }
-}
-
-function clearGlyphMatrix() {
-  for (let i = 0; i < 225; i++) {
-    setPixelState(i, false);
-  }
-  if (document.getElementById('glyphPresetSelect')) {
-    document.getElementById('glyphPresetSelect').value = 'clear';
-  }
-}
-
-function loadGlyphPreset(preset) {
-  clearGlyphMatrix();
-  if (preset === 'clear') return;
-  
-  let activeIndices = [];
-  
-  if (preset === 'arrow') {
-    // Center column shaft:
-    for (let r = 2; r <= 7; r++) activeIndices.push(r * 15 + 7);
-    // Triangle head:
-    for (let c = 7 - 0; c <= 7 + 0; c++) activeIndices.push(8 * 15 + c);
-    for (let c = 7 - 1; c <= 7 + 1; c++) activeIndices.push(9 * 15 + c);
-    for (let c = 7 - 2; c <= 7 + 2; c++) activeIndices.push(10 * 15 + c);
-    for (let c = 7 - 3; c <= 7 + 3; c++) activeIndices.push(11 * 15 + c);
-    for (let c = 7 - 4; c <= 7 + 4; c++) activeIndices.push(12 * 15 + c);
-    for (let c = 7 - 5; c <= 7 + 5; c++) activeIndices.push(13 * 15 + c);
-    for (let c = 7 - 6; c <= 7 + 6; c++) activeIndices.push(14 * 15 + c);
-  } else if (preset === 'heart') {
-    const heartRows = {
-      2: [4, 5, 9, 10],
-      3: [3, 4, 5, 6, 8, 9, 10, 11],
-      4: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-      5: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-      6: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-      7: [3, 4, 5, 6, 7, 8, 9, 10, 11],
-      8: [4, 5, 6, 7, 8, 9, 10],
-      9: [5, 6, 7, 8, 9],
-      10: [6, 7, 8],
-      11: [7]
-    };
-    Object.keys(heartRows).forEach(r => {
-      const row = parseInt(r);
-      heartRows[row].forEach(c => activeIndices.push(row * 15 + c));
-    });
-  } else if (preset === 'smile') {
-    // Eyes:
-    activeIndices.push(4 * 15 + 4, 4 * 15 + 10);
-    activeIndices.push(5 * 15 + 4, 5 * 15 + 10);
-    // Smile mouth:
-    activeIndices.push(8 * 15 + 3, 8 * 15 + 11);
-    activeIndices.push(9 * 15 + 4, 9 * 15 + 10);
-    for (let c = 5; c <= 9; c++) activeIndices.push(10 * 15 + c);
-  } else if (preset === 'check') {
-    // Giant checkmark
-    const checkCoords = [
-      [8, 2], [9, 3], [10, 4], [11, 5],
-      [10, 6], [9, 7], [8, 8], [7, 9], [6, 10], [5, 11], [4, 12], [3, 13]
-    ];
-    checkCoords.forEach(([r, c]) => {
-      activeIndices.push(r * 15 + c);
-      activeIndices.push((r - 1) * 15 + c);
-    });
-  } else if (preset === 'custom1') {
-    // Horizontal sound wave
-    for (let c = 0; c < 15; c++) {
-      const ht = Math.round(3 + Math.sin(c * 0.8) * 3);
-      for (let offset = 0; offset <= ht; offset++) {
-        activeIndices.push((7 - offset) * 15 + c);
-        activeIndices.push((7 + offset) * 15 + c);
-      }
-    }
-  }
-  
-  activeIndices.forEach(idx => {
-    if (idx >= 0 && idx < 225) setPixelState(idx, true);
   });
 }
 
-function setGlyphMode(mode) {
-  glyphMode = mode;
+function syncQuickNotesUI() {
+  const textarea = document.getElementById('quickNotesTextarea');
+  const card = document.getElementById('scratchpadCard');
+  const pinBtn = document.getElementById('scratchpadPinBtn');
   
-  clearInterval(glyphAnimateInterval);
-  glyphAnimateInterval = null;
-  
-  document.querySelectorAll('.glyph-btn').forEach(btn => btn.classList.remove('active'));
-  const statusEl = document.getElementById('glyphStatus');
-  if (statusEl) statusEl.textContent = `MODE: ${mode.toUpperCase()}`;
-  
-  if (mode === 'draw') {
-    document.getElementById('glyphModeBtnDraw')?.classList.add('active');
-    loadGlyphPreset('arrow');
-  } else if (mode === 'timer') {
-    document.getElementById('glyphModeBtnTimer')?.classList.add('active');
-    syncGlyphWithTimer();
-  } else if (mode === 'party') {
-    document.getElementById('glyphModeBtnParty')?.classList.add('active');
-    startGlyphAnimation();
-  }
-}
-
-function changeGlyphBrightness(val) {
-  glyphBrightness = val;
-  document.documentElement.style.setProperty('--glyph-brightness', val / 100);
-  
-  for (let i = 0; i < 225; i++) {
-    if (glyphState[i]) {
-      const pixel = document.querySelector(`.glyph-pixel[data-index="${i}"]`);
-      if (pixel) {
-        pixel.style.opacity = val / 100;
-        pixel.style.boxShadow = `0 0 ${Math.round(val/10)}px #ffffff`;
-      }
+  if (textarea) {
+    if (document.activeElement !== textarea) {
+      textarea.value = appState.quickNotes || '';
     }
   }
-}
 
-function syncGlyphWithTimer() {
-  if (glyphMode !== 'timer') return;
-  
-  clearGlyphMatrix();
-  
-  let pct = 0;
-  if (timerIsRunning) {
-    if (timerMode === 'pomodoro') {
-      const total = 25 * 60;
-      pct = ((total - pomoTimeLeft) / total) * 100;
+  if (card && pinBtn) {
+    if (appState.quickNotesPinned) {
+      card.classList.add('pinned');
+      pinBtn.classList.add('active');
+      const pinText = pinBtn.querySelector('span');
+      if (pinText) pinText.textContent = 'PINNED';
     } else {
-      const targetSeconds = getCustomTargetSeconds();
-      if (targetSeconds > 0) {
-        pct = (pomoTimeLeft / targetSeconds) * 100;
-      } else {
-        pct = (pomoTimeLeft % 60) / 60 * 100;
-      }
+      card.classList.remove('pinned');
+      pinBtn.classList.remove('active');
+      const pinText = pinBtn.querySelector('span');
+      if (pinText) pinText.textContent = 'PIN';
     }
-  } else if (pomoTimeLeft > 0) {
-    if (timerMode === 'pomodoro') {
-      pct = ((25 * 60 - pomoTimeLeft) / (25 * 60)) * 100;
-    } else {
-      const targetSeconds = getCustomTargetSeconds();
-      if (targetSeconds > 0) {
-        pct = (pomoTimeLeft / targetSeconds) * 100;
-      } else {
-        pct = (pomoTimeLeft % 60) / 60 * 100;
-      }
-    }
-  }
-  
-  let perimeterPixels = [];
-  
-  for (let i = 0; i < 225; i++) {
-    const row = Math.floor(i / 15);
-    const col = i % 15;
-    const dx = col - 7;
-    const dy = row - 7;
-    const dist = Math.sqrt(dx*dx + dy*dy);
-    
-    if (dist >= 6.0 && dist <= 7.3) {
-      const angle = Math.atan2(dy, dx);
-      perimeterPixels.push({ index: i, angle });
-    }
-  }
-  
-  perimeterPixels.sort((a, b) => {
-    let angA = a.angle + Math.PI/2;
-    if (angA < 0) angA += 2 * Math.PI;
-    let angB = b.angle + Math.PI/2;
-    if (angB < 0) angB += 2 * Math.PI;
-    return angA - angB;
-  });
-  
-  const lightLimit = Math.min(perimeterPixels.length, Math.max(0, Math.round((pct / 100) * perimeterPixels.length)));
-  for (let j = 0; j < lightLimit; j++) {
-    setPixelState(perimeterPixels[j].index, true);
-  }
-  
-  if (timerIsRunning) {
-    const centerIndices = [
-      6 * 15 + 6, 6 * 15 + 7, 6 * 15 + 8,
-      7 * 15 + 6, 7 * 15 + 7, 7 * 15 + 8,
-      8 * 15 + 6, 8 * 15 + 7, 8 * 15 + 8
-    ];
-    const isOddSecond = Math.floor(Date.now() / 1000) % 2 === 0;
-    centerIndices.forEach(idx => {
-      setPixelState(idx, isOddSecond);
-    });
   }
 }
 
-function syncGlyphWithProgress() {
-  if (glyphMode !== 'timer' && glyphMode !== 'party') {
-    // Left empty for draw mode priority
-  }
+function handleQuickNotesInput(event) {
+  const text = event.target.value;
+  appState.quickNotes = text;
+  
+  // Save state with a debounce to avoid frequent DB hits
+  clearTimeout(quickNotesDebounceTimeout);
+  quickNotesDebounceTimeout = setTimeout(() => {
+    saveState();
+  }, 1000);
 }
 
-function startGlyphAnimation() {
-  let step = 0;
+function toggleScratchpadPin() {
+  appState.quickNotesPinned = !appState.quickNotesPinned;
+  saveState();
+  syncQuickNotesUI();
   
-  glyphAnimateInterval = setInterval(() => {
-    clearGlyphMatrix();
+  // Visual feedback
+  showToast(appState.quickNotesPinned ? 'Notes Pinned!' : 'Notes Unpinned.');
+}
+
+async function copyScratchpadText() {
+  const textarea = document.getElementById('quickNotesTextarea');
+  if (!textarea) return;
+  
+  const text = textarea.value;
+  if (!text.trim()) {
+    showToast('Nothing to copy!');
+    return;
+  }
+  
+  try {
+    await navigator.clipboard.writeText(text);
     
-    for (let c = 0; c < 15; c++) {
-      const rawHt = 4 + Math.sin(c * 0.7 + step * 0.4) * 4;
-      const ht = Math.round(rawHt);
-      for (let offset = 0; offset <= ht; offset++) {
-        const idxTop = (7 - offset) * 15 + c;
-        const idxBottom = (7 + offset) * 15 + c;
-        
-        const dxTop = c - 7;
-        const dyTop = (7 - offset) - 7;
-        if (Math.sqrt(dxTop*dxTop + dyTop*dyTop) <= 7.2) {
-          setPixelState(idxTop, true);
-        }
-        
-        const dxBot = c - 7;
-        const dyBot = (7 + offset) - 7;
-        if (Math.sqrt(dxBot*dxBot + dyBot*dyBot) <= 7.2) {
-          setPixelState(idxBottom, true);
-        }
-      }
+    // Copy button success transition
+    const copyBtn = document.getElementById('scratchpadCopyBtn');
+    if (copyBtn) {
+      copyBtn.classList.add('success');
+      const btnText = copyBtn.querySelector('span');
+      const originalText = btnText ? btnText.textContent : 'COPY';
+      if (btnText) btnText.textContent = 'COPIED!';
+      
+      setTimeout(() => {
+        copyBtn.classList.remove('success');
+        if (btnText) btnText.textContent = originalText;
+      }, 2000);
     }
-    step++;
-  }, 100);
+    showToast('Copied to clipboard!');
+  } catch (err) {
+    console.error('Failed to copy text: ', err);
+    showToast('Failed to copy. Please select and copy manually.');
+  }
 }
 

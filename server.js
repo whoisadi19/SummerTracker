@@ -163,7 +163,7 @@ app.post('/api/progress', authenticateJWT, async (req, res) => {
     return res.status(503).json({ error: 'Database offline.' });
   }
 
-  const { completed, streak, bestStreak, lastActiveDate, xp, heatmap, notes, theme, studySessions, subjects, customResources } = req.body;
+  const { completed, streak, bestStreak, lastActiveDate, xp, heatmap, notes, theme, studySessions, subjects, customResources, quickNotes, quickNotesPinned } = req.body;
 
   try {
     const progress = await Progress.findOneAndUpdate(
@@ -180,7 +180,9 @@ app.post('/api/progress', authenticateJWT, async (req, res) => {
           theme: theme || 'cyber',
           studySessions: studySessions || [],
           subjects: subjects || ['DSA', 'ML'],
-          customResources: customResources || []
+          customResources: customResources || [],
+          quickNotes: quickNotes !== undefined ? quickNotes : '',
+          quickNotesPinned: quickNotesPinned !== undefined ? quickNotesPinned : false
         }
       },
       { new: true, upsert: true }
