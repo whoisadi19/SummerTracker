@@ -216,6 +216,120 @@ function formatDate(date) {
   return date.toLocaleDateString('en-US', opts);
 }
 
+// ── PACING & CURRICULUM HELPERS ──
+function getScheduleTargetTasks(dayIndex) {
+  const data = getChecklistData();
+  if (!data) return 0;
+
+  let target = 0;
+  const currentWeekNum = Math.floor(dayIndex / 7) + 1; // 1 to 6
+  const currentWeekDay = dayIndex % 7; // 0 to 6
+
+  for (let w = 1; w <= 6; w++) {
+    const weekDsa = data.dsa.find(item => item.week === w);
+    const weekMl = data.ml.find(item => item.week === w);
+    let weekTasksCount = 0;
+
+    if (weekDsa && weekDsa.units) {
+      weekDsa.units.forEach(u => {
+        if (u.items) weekTasksCount += u.items.length;
+      });
+    }
+    if (weekMl && weekMl.units) {
+      weekMl.units.forEach(u => {
+        if (u.items) weekTasksCount += u.items.length;
+      });
+    }
+
+    if (w < currentWeekNum) {
+      target += weekTasksCount;
+    } else if (w === currentWeekNum) {
+      target += Math.round((currentWeekDay / 7) * weekTasksCount);
+    }
+  }
+  return target;
+}
+
+function getNextFocusTasks() {
+  const data = getChecklistData();
+  if (!data) return { nextDsa: null, nextMl: null };
+
+  const dsaWeeks = data.dsa || [];
+  const mlWeeks = data.ml || [];
+
+  let nextDsa = null;
+  let nextMl = null;
+
+  // Find first incomplete DSA task
+  for (const week of dsaWeeks) {
+    for (const unit of week.units) {
+      for (const item of unit.items) {
+        if (!appState.completed || !appState.completed[item.id]) {
+          nextDsa = { week: week.week, unitTitle: unit.title, taskText: item.text };
+          break;
+        }
+      }
+      if (nextDsa) break;
+    }
+    if (nextDsa) break;
+  }
+
+  // Find first incomplete ML task
+  for (const week of mlWeeks) {
+    for (const unit of week.units) {
+      for (const item of unit.items) {
+        if (!appState.completed || !appState.completed[item.id]) {
+          nextMl = { week: week.week, unitTitle: unit.title, taskText: item.text };
+          break;
+        }
+      }
+      if (nextMl) break;
+    }
+    if (nextMl) break;
+  }
+
+  return { nextDsa, nextMl };
+}
+
+function getCurrentWeekPacingInfo(weekNum) {
+  const data = getChecklistData();
+  if (!data) return { total: 0, done: 0, pct: 0, dates: `Week ${weekNum}` };
+
+  let total = 0;
+  let done = 0;
+  let dates = `Week ${weekNum}`;
+
+  const dsaWeek = data.dsa.find(w => w.week === weekNum);
+  if (dsaWeek) {
+    dates = dsaWeek.dates;
+    dsaWeek.units.forEach(unit => {
+      unit.items.forEach(item => {
+        total++;
+        if (appState.completed && appState.completed[item.id]) done++;
+      });
+    });
+  }
+
+  const mlWeek = data.ml.find(w => w.week === weekNum);
+  if (mlWeek) {
+    if (!dsaWeek) dates = mlWeek.dates;
+    mlWeek.units.forEach(unit => {
+      unit.items.forEach(item => {
+        total++;
+        if (appState.completed && appState.completed[item.id]) done++;
+      });
+    });
+  }
+
+  return {
+    total,
+    done,
+    pct: total ? Math.round((done / total) * 100) : 0,
+    dates
+  };
+}
+
+
 // ── PROGRESS & XP ──
 function getProgress() {
   let dsaTotal = 0, dsaDone = 0;
@@ -815,22 +929,108 @@ function renderDashboard() {
   const daysCount = Math.max(1, info.daysLeft);
   const tasksPerDay = Math.ceil(remaining / daysCount);
   const motivationDescEl = document.getElementById('motivationDesc');
+  
   if (motivationDescEl) {
     if (remaining === 0) {
-      motivationDescEl.innerHTML = `🎉 <strong>Congratulations!</strong> You have fully completed all ${progress.overall.total} curriculum tasks. Phenomenal job keeping up with your schedule!`;
+      motivationDescEl.innerHTML = `
+        <div class="insight-container">
+          <div class="insight-pacing-text">
+            🏆 <strong>Curriculum Fully Completed!</strong> Phenomenal job completing all <strong>${progress.overall.total}</strong> tasks! You've built a stellar foundation in DSA and Machine Learning. Enjoy your summer!
+          </div>
+        </div>
+      `;
     } else if (info.isFuture) {
-      motivationDescEl.innerHTML = `Your summer curriculum starts in <strong>${Math.abs(info.dayIndex)}</strong> days. To finish all <strong>${progress.overall.total}</strong> tasks on time, you should aim to complete about <strong>${tasksPerDay}</strong> task${tasksPerDay > 1 ? 's' : ''} per day once it begins.`;
+      motivationDescEl.innerHTML = `
+        <div class="insight-container">
+          <div class="insight-pacing-text">
+            📅 <strong>Preparation Mode:</strong> The summer schedule kicks off in <strong>${Math.abs(info.dayIndex)}</strong> days. To complete all <strong>${progress.overall.total}</strong> tasks on time, your target pace will be <strong>${tasksPerDay}</strong> task${tasksPerDay > 1 ? 's' : ''} per day once we begin.
+          </div>
+        </div>
+      `;
     } else if (info.isPast) {
-      motivationDescEl.innerHTML = `The summer schedule has officially ended. You have <strong>${remaining}</strong> task${remaining > 1 ? 's' : ''} remaining. Try to complete them as soon as possible to finish your curriculum!`;
+      motivationDescEl.innerHTML = `
+        <div class="insight-container">
+          <div class="insight-pacing-text">
+            ⌛ <strong>Schedule Concluded:</strong> The formal summer term ended on July 5, 2026. You have <strong>${remaining}</strong> task${remaining > 1 ? 's' : ''} remaining. Try to finish at a pace of <strong>${tasksPerDay}</strong> task${tasksPerDay > 1 ? 's' : ''}/day to wrap up the curriculum!
+          </div>
+        </div>
+      `;
     } else {
-      const dayIndex = Math.max(0, Math.min(TOTAL_DAYS, info.dayIndex));
-      const targetCompleted = Math.min(progress.overall.total, Math.round((dayIndex / TOTAL_DAYS) * progress.overall.total));
+      const dayIndexBounded = Math.max(0, Math.min(TOTAL_DAYS - 1, info.dayIndex));
+      const targetCompleted = Math.min(progress.overall.total, getScheduleTargetTasks(dayIndexBounded));
+      const weekNumBounded = Math.max(1, Math.min(6, info.weekIndex + 1));
+      const weekPacing = getCurrentWeekPacingInfo(weekNumBounded);
+      const { nextDsa, nextMl } = getNextFocusTasks();
+
+      // Determine coaching narrative & strategy
+      let narrativeHtml = "";
       if (progress.overall.done >= targetCompleted) {
-        motivationDescEl.innerHTML = `You are <strong>on track</strong> (completed <strong>${progress.overall.done}</strong> of <strong>${progress.overall.total}</strong> tasks, target: <strong>${targetCompleted}</strong>). To finish your remaining <strong>${remaining}</strong> tasks in the next <strong>${info.daysLeft}</strong> days, you need to complete <strong>${tasksPerDay}</strong> task${tasksPerDay > 1 ? 's' : ''} per day.`;
+        const aheadBy = progress.overall.done - targetCompleted;
+        if (aheadBy >= 5) {
+          narrativeHtml = `🔥 <strong>Incredible speed!</strong> You are <strong>${aheadBy}</strong> tasks ahead of schedule. Keep this up or take a lighter load today. Maintaining <strong>${tasksPerDay}</strong> task${tasksPerDay > 1 ? 's' : ''}/day will keep you coasting.`;
+        } else {
+          narrativeHtml = `✨ <strong>Perfect pacing!</strong> You are right on track with your goals (target: <strong>${targetCompleted}</strong>). Keep doing about <strong>${tasksPerDay}</strong> task${tasksPerDay > 1 ? 's' : ''}/day to finish comfortably.`;
+        }
       } else {
         const behindBy = targetCompleted - progress.overall.done;
-        motivationDescEl.innerHTML = `You are behind schedule by <strong>${behindBy}</strong> task${behindBy > 1 ? 's' : ''} (completed <strong>${progress.overall.done}</strong>, target: <strong>${targetCompleted}</strong>). To catch up and finish your remaining <strong>${remaining}</strong> tasks on time, you need to complete <strong>${tasksPerDay}</strong> task${tasksPerDay > 1 ? 's' : ''} per day.`;
+        if (behindBy > 5) {
+          narrativeHtml = `⏳ <strong>Let's catch up step-by-step:</strong> You are behind schedule by <strong>${behindBy}</strong> tasks (target: <strong>${targetCompleted}</strong>). To get back on track comfortably, aim for <strong>${tasksPerDay}</strong> tasks/day. Focus on checking off just 1 extra task per session!`;
+        } else {
+          narrativeHtml = `⏳ <strong>Slightly behind pace:</strong> You are only <strong>${behindBy}</strong> task${behindBy > 1 ? 's' : ''} behind your target of <strong>${targetCompleted}</strong>. Completing <strong>${tasksPerDay}</strong> tasks today will bridge the gap!`;
+        }
       }
+
+      // Build Next Steps HTML if tasks are incomplete
+      let nextStepsHtml = "";
+      if (nextDsa || nextMl) {
+        let rows = "";
+        if (nextDsa) {
+          rows += `
+            <div class="insight-next-row">
+              <span class="insight-badge dsa">DSA</span>
+              <div class="insight-next-content">
+                <span class="insight-next-topic">${nextDsa.unitTitle}:</span>
+                <span class="insight-next-task">${nextDsa.taskText}</span>
+              </div>
+            </div>
+          `;
+        }
+        if (nextMl) {
+          rows += `
+            <div class="insight-next-row">
+              <span class="insight-badge ml">ML</span>
+              <div class="insight-next-content">
+                <span class="insight-next-topic">${nextMl.unitTitle}:</span>
+                <span class="insight-next-task">${nextMl.taskText}</span>
+              </div>
+            </div>
+          `;
+        }
+        nextStepsHtml = `
+          <div class="insight-next-focus">
+            <div class="insight-next-title">🎯 Recommended Next Focus</div>
+            ${rows}
+          </div>
+        `;
+      }
+
+      motivationDescEl.innerHTML = `
+        <div class="insight-container">
+          <div class="insight-pacing-text">${narrativeHtml}</div>
+          
+          <div class="insight-progress-section">
+            <div class="insight-progress-header">
+              <span>📅 Week ${weekNumBounded} Goal (${weekPacing.dates})</span>
+              <span class="insight-progress-val">${weekPacing.done} / ${weekPacing.total} Tasks (${weekPacing.pct}%)</span>
+            </div>
+            <div class="cprog-bar">
+              <div class="cprog-fill rev" style="width: ${weekPacing.pct}%;"></div>
+            </div>
+          </div>
+
+          ${nextStepsHtml}
+        </div>
+      `;
     }
   }
 

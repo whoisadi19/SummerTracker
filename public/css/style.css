@@ -2547,3 +2547,112 @@ body::before {
   height: 20px;
 }
 
+/* Intelligent Insights Card Custom Layout */
+.insight-container {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  margin-top: 8px;
+}
+
+.insight-pacing-text {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-primary);
+}
+
+.insight-progress-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  background: var(--bg-surface-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.insight-progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.insight-progress-val {
+  color: var(--accent-gold);
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.insight-next-focus {
+  padding: 14px 16px;
+  background: var(--bg-surface-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.insight-next-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
+}
+
+.insight-next-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.insight-next-row:not(:last-child) {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  padding-bottom: 8px;
+}
+
+.insight-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.insight-badge.dsa {
+  background: rgba(224, 108, 83, 0.12);
+  color: var(--accent-dsa);
+  border: 1px solid rgba(224, 108, 83, 0.2);
+}
+
+.insight-badge.ml {
+  background: rgba(82, 143, 196, 0.12);
+  color: var(--accent-ml);
+  border: 1px solid rgba(82, 143, 196, 0.2);
+}
+
+.insight-next-content {
+  color: var(--text-primary);
+}
+
+.insight-next-topic {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.insight-next-task {
+  color: var(--text-secondary);
+}
+
+
