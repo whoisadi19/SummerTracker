@@ -345,97 +345,154 @@ function shootConfetti() {
   animate();
 }
 
-// ── POMODORO ──
+// ── TIMER STATE (POMODORO & CUSTOM) ──
+let timerMode = 'pomodoro'; // 'pomodoro' or 'custom'
+let timerIsRunning = false;
+let timerStartTime = null;
+let timerAccumulatedSeconds = 0;
+let sessionXpAwarded = 0;
 let pomoTimer = null;
 let pomoTimeLeft = 25 * 60;
-let pomoMode = 'work';
 let currentSessionId = null;
+
+function getCustomTargetSeconds() {
+  const input = document.getElementById('customTargetMinutes');
+  if (input && input.value) {
+    const val = parseInt(input.value);
+    if (val > 0) return val * 60;
+  }
+  return 0; // 0 means no limit
+}
+
+function updateTimerTick() {
+  if (!timerIsRunning) return;
+  
+  const elapsedInCurrentRun = Math.floor((Date.now() - timerStartTime) / 1000);
+  const totalSeconds = timerAccumulatedSeconds + elapsedInCurrentRun;
+  
+  if (timerMode === 'pomodoro') {
+    pomoTimeLeft = 25 * 60 - totalSeconds;
+    updateActiveSessionDuration(totalSeconds);
+    
+    if (pomoTimeLeft <= 0) {
+      pomoTimeLeft = 0;
+      handleTimerComplete();
+    }
+  } else {
+    // Custom Mode (Count Up)
+    pomoTimeLeft = totalSeconds;
+    updateActiveSessionDuration(totalSeconds);
+    
+    const targetSeconds = getCustomTargetSeconds();
+    if (targetSeconds > 0 && totalSeconds >= targetSeconds) {
+      pomoTimeLeft = targetSeconds;
+      handleTimerComplete();
+    }
+  }
+  
+  updatePomodoroUI();
+}
+
+function updateActiveSessionDuration(totalSeconds) {
+  if (!currentSessionId) {
+    currentSessionId = 'sess-' + Date.now();
+    if (!appState.studySessions) appState.studySessions = [];
+    appState.studySessions.push({
+      id: currentSessionId,
+      subject: pomoActiveSubject,
+      duration: 0,
+      timestamp: new Date().toISOString()
+    });
+    
+    // Increment heatmap activity count on start
+    const dStr = new Date().toISOString().split('T')[0];
+    if (!appState.heatmap) appState.heatmap = {};
+    appState.heatmap[dStr] = (appState.heatmap[dStr] || 0) + 1;
+  }
+  
+  const sess = appState.studySessions.find(s => s.id === currentSessionId);
+  if (sess) {
+    sess.duration = totalSeconds;
+    
+    // Award XP (1 XP every 75 seconds studied, up to 20 XP in 25 mins)
+    const expectedXp = Math.floor(totalSeconds / 75);
+    const xpDelta = expectedXp - sessionXpAwarded;
+    if (xpDelta > 0) {
+      appState.xp = (appState.xp || 0) + xpDelta;
+      sessionXpAwarded = expectedXp;
+      renderDashboard();
+    }
+  }
+  
+  // Fast local save
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+  
+  // Lightweight server syncing every 15 seconds
+  if (totalSeconds % 15 === 0) {
+    syncCloudProgress();
+  }
+}
+
+function handleTimerComplete() {
+  timerIsRunning = false;
+  clearInterval(pomoTimer);
+  pomoTimer = null;
+  
+  showToast('Session Complete! 🍅');
+  shootConfetti();
+  
+  if (timerMode === 'pomodoro') {
+    const sess = appState.studySessions.find(s => s.id === currentSessionId);
+    if (sess) {
+      const currentXpEarned = Math.floor(sess.duration / 75);
+      const remainderXp = 20 - currentXpEarned;
+      if (remainderXp > 0) {
+        appState.xp = (appState.xp || 0) + remainderXp;
+      }
+    } else {
+      appState.xp = (appState.xp || 0) + 20;
+    }
+  }
+  
+  timerAccumulatedSeconds = timerMode === 'pomodoro' ? 25 * 60 : getCustomTargetSeconds();
+  currentSessionId = null;
+  sessionXpAwarded = 0;
+  
+  const playSvg = '<polygon points="5 3 19 12 5 21 5 3"></polygon>';
+  const icon = document.getElementById('pomoPlayIcon');
+  const focusIcon = document.getElementById('focusPlayIcon');
+  if (icon) icon.innerHTML = playSvg;
+  if (focusIcon) focusIcon.innerHTML = playSvg;
+  
+  saveState();
+  renderDashboard();
+  exitFocusMode();
+  updatePomodoroUI();
+}
 
 function togglePomodoro() {
   const icon = document.getElementById('pomoPlayIcon');
   const focusIcon = document.getElementById('focusPlayIcon');
+  const playSvg = '<polygon points="5 3 19 12 5 21 5 3"></polygon>';
+  const pauseSvg = '<rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect>';
   
-  if (pomoTimer) {
+  if (timerIsRunning) {
+    timerIsRunning = false;
     clearInterval(pomoTimer);
     pomoTimer = null;
-    const playSvg = '<polygon points="5 3 19 12 5 21 5 3"></polygon>';
+    
+    const elapsedInCurrentRun = Math.floor((Date.now() - timerStartTime) / 1000);
+    timerAccumulatedSeconds += elapsedInCurrentRun;
+    
     if (icon) icon.innerHTML = playSvg;
     if (focusIcon) focusIcon.innerHTML = playSvg;
     
-    // Save state on pause to trigger immediate cloud sync
     saveState();
   } else {
-    pomoTimer = setInterval(() => {
-      pomoTimeLeft--;
-      
-      if (pomoMode === 'work') {
-        // Real-time second-by-second logging
-        if (!currentSessionId) {
-          currentSessionId = 'sess-' + Date.now();
-          if (!appState.studySessions) appState.studySessions = [];
-          appState.studySessions.push({
-            id: currentSessionId,
-            subject: pomoActiveSubject,
-            duration: 0,
-            timestamp: new Date().toISOString()
-          });
-          
-          // Increment heatmap activity count on start
-          const dStr = new Date().toISOString().split('T')[0];
-          if (!appState.heatmap) appState.heatmap = {};
-          appState.heatmap[dStr] = (appState.heatmap[dStr] || 0) + 1;
-        }
-        
-        const sess = appState.studySessions.find(s => s.id === currentSessionId);
-        if (sess) {
-          sess.duration += 1;
-          
-          // Award XP proportionally (1 XP every 75 seconds studied, up to 20 XP in 25 mins)
-          if (sess.duration % 75 === 0) {
-            appState.xp = (appState.xp || 0) + 1;
-            renderDashboard();
-          }
-        }
-        
-        // Fast local save
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
-        
-        // Lightweight server syncing every 15 seconds
-        if (pomoTimeLeft % 15 === 0) {
-          syncCloudProgress();
-        }
-      }
-      
-      if (pomoTimeLeft <= 0) {
-        clearInterval(pomoTimer);
-        pomoTimer = null;
-        showToast('Session Complete! 🍅');
-        if (pomoMode === 'work') {
-          shootConfetti();
-          // Top up XP to exactly 20 XP for this session if it finished completely
-          const sess = appState.studySessions.find(s => s.id === currentSessionId);
-          if (sess) {
-            const currentXpEarned = Math.floor(sess.duration / 75);
-            const remainderXp = 20 - currentXpEarned;
-            if (remainderXp > 0) {
-              appState.xp = (appState.xp || 0) + remainderXp;
-            }
-          } else {
-            appState.xp = (appState.xp || 0) + 20;
-          }
-          currentSessionId = null;
-          saveState();
-        }
-        const playSvg = '<polygon points="5 3 19 12 5 21 5 3"></polygon>';
-        if (icon) icon.innerHTML = playSvg;
-        if (focusIcon) focusIcon.innerHTML = playSvg;
-        renderDashboard(); // Update XP
-        exitFocusMode(); // Dismiss focus mode overlay upon completion
-      }
-      updatePomodoroUI(); // Keep clock counting down dynamically on screens!
-    }, 1000);
+    timerIsRunning = true;
+    timerStartTime = Date.now();
+    pomoTimer = setInterval(updateTimerTick, 1000);
     
-    const pauseSvg = '<rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect>';
     if (icon) icon.innerHTML = pauseSvg;
     if (focusIcon) focusIcon.innerHTML = pauseSvg;
   }
@@ -449,17 +506,28 @@ function resetPomodoro() {
   
   if (currentSessionId) {
     const sess = (appState.studySessions || []).find(s => s.id === currentSessionId);
-    if (sess && sess.duration >= 5) {
-      const mins = Math.floor(sess.duration / 60);
-      const secs = sess.duration % 60;
-      showToast(`Saved study session: ${mins}m ${secs}s for ${sess.subject}! 📚`);
-    } else if (sess && sess.duration < 5) {
-      // Discard very short accidental sessions
-      appState.studySessions = appState.studySessions.filter(s => s.id !== currentSessionId);
+    let finalDuration = timerAccumulatedSeconds;
+    if (timerIsRunning && timerStartTime) {
+      finalDuration += Math.floor((Date.now() - timerStartTime) / 1000);
+    }
+    
+    if (sess) {
+      sess.duration = finalDuration;
+      if (sess.duration >= 5) {
+        const mins = Math.floor(sess.duration / 60);
+        const secs = sess.duration % 60;
+        showToast(`Saved study session: ${mins}m ${secs}s for ${sess.subject}! 📚`);
+      } else {
+        appState.studySessions = appState.studySessions.filter(s => s.id !== currentSessionId);
+      }
     }
   }
   
   currentSessionId = null;
+  timerIsRunning = false;
+  timerAccumulatedSeconds = 0;
+  sessionXpAwarded = 0;
+  
   saveState();
   renderDashboard();
   
@@ -469,14 +537,32 @@ function resetPomodoro() {
   if (icon) icon.innerHTML = playSvg;
   if (focusIcon) focusIcon.innerHTML = playSvg;
   
-  pomoTimeLeft = pomoMode === 'work' ? 25 * 60 : 5 * 60;
+  if (timerMode === 'pomodoro') {
+    pomoTimeLeft = 25 * 60;
+  } else {
+    pomoTimeLeft = 0;
+  }
   updatePomodoroUI();
 }
 
-function setPomodoroMode(m, btn) {
-  pomoMode = m;
-  document.getElementById('pomoBtnWork').classList.toggle('active', m === 'work');
-  document.getElementById('pomoBtnBreak').classList.toggle('active', m === 'break');
+function setTimerMode(mode) {
+  if (timerIsRunning) {
+    if (!confirm('This will reset your current study session. Proceed?')) return;
+  }
+  
+  timerMode = mode;
+  
+  const pomoBtn = document.getElementById('timerModePomo');
+  const customBtn = document.getElementById('timerModeCustom');
+  const customInputs = document.getElementById('customTimerInputs');
+  
+  if (pomoBtn) pomoBtn.classList.toggle('active', mode === 'pomodoro');
+  if (customBtn) customBtn.classList.toggle('active', mode === 'custom');
+  
+  if (customInputs) {
+    customInputs.style.display = mode === 'custom' ? 'flex' : 'none';
+  }
+  
   resetPomodoro();
 }
 
@@ -485,25 +571,33 @@ function updatePomodoroUI() {
   const s = pomoTimeLeft % 60;
   const timeStr = `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
   
-  // Standard UI
   const timeEl = document.getElementById('pomoTime');
-  if(timeEl) timeEl.textContent = timeStr;
+  if (timeEl) timeEl.textContent = timeStr;
   
-  const total = pomoMode === 'work' ? 25 * 60 : 5 * 60;
-  const pct = ((total - pomoTimeLeft) / total) * 100;
+  const focusTimeEl = document.getElementById('focusTime');
+  if (focusTimeEl) focusTimeEl.textContent = timeStr;
+  
+  let pct = 0;
+  if (timerMode === 'pomodoro') {
+    const total = 25 * 60;
+    pct = ((total - pomoTimeLeft) / total) * 100;
+  } else {
+    const targetSeconds = getCustomTargetSeconds();
+    if (targetSeconds > 0) {
+      pct = (pomoTimeLeft / targetSeconds) * 100;
+    } else {
+      pct = (pomoTimeLeft % 60) / 60 * 100;
+    }
+  }
   
   const ring = document.getElementById('pomoRing');
-  if(ring) {
+  if (ring) {
     const circumference = 2 * Math.PI * 90;
     ring.style.strokeDashoffset = circumference - (pct / 100) * circumference;
   }
   
-  // Focus Mode Overlay UI
-  const focusTimeEl = document.getElementById('focusTime');
-  if(focusTimeEl) focusTimeEl.textContent = timeStr;
-  
   const focusRing = document.getElementById('focusRing');
-  if(focusRing) {
+  if (focusRing) {
     const circumference = 2 * Math.PI * 90;
     focusRing.style.strokeDashoffset = circumference - (pct / 100) * circumference;
   }
@@ -1486,7 +1580,9 @@ function renderPinger() {
     `;
   }
   
-  if (!pingTimer) checkPing();
+  if (!pingTimer) {
+    pingTimer = setTimeout(checkPing, 0);
+  }
 }
 
 async function checkPing() {
@@ -1495,19 +1591,36 @@ async function checkPing() {
     pingTimer = null;
     return;
   }
+  
   const start = Date.now();
   try {
-    // Ping our own express server health route
     const res = await fetch('/api/health'); 
+    if (currentView !== 'pinger') {
+      pingTimer = null;
+      return;
+    }
     const latency = Date.now() - start;
-    document.getElementById('pingLatency').textContent = latency + 'ms';
-    document.querySelector('.status-indicator').style.background = 'var(--accent-os)';
+    const latencyEl = document.getElementById('pingLatency');
+    if (latencyEl) latencyEl.textContent = latency + 'ms';
+    const statusEl = document.querySelector('.status-indicator');
+    if (statusEl) statusEl.style.background = 'var(--accent-os)';
     logPing(latency);
   } catch (e) {
-    document.getElementById('pingLatency').textContent = 'ERROR';
-    document.querySelector('.status-indicator').style.background = '#ff3366';
+    if (currentView !== 'pinger') {
+      pingTimer = null;
+      return;
+    }
+    const latencyEl = document.getElementById('pingLatency');
+    if (latencyEl) latencyEl.textContent = 'ERROR';
+    const statusEl = document.querySelector('.status-indicator');
+    if (statusEl) statusEl.style.background = '#ff3366';
   }
-  pingTimer = setTimeout(checkPing, 5000);
+  
+  if (currentView === 'pinger') {
+    pingTimer = setTimeout(checkPing, 5000);
+  } else {
+    pingTimer = null;
+  }
 }
 
 function logPing(ms) {
@@ -1678,345 +1791,26 @@ function logout(forced = false) {
 }
 
 // ── DSA & REVIEW LAB LOGIC ──
-let labActiveTab = 'visualizer';
-let visData = [];
-let visRunning = false;
-let visStopRequested = false;
-let visDelay = 300;
+let labActiveTab = 'playground';
 
 function switchLabTab(tab) {
   labActiveTab = tab;
-  document.getElementById('btnLabVisualizer').classList.toggle('active', tab === 'visualizer');
-  document.getElementById('btnLabPlayground').classList.toggle('active', tab === 'playground');
-  document.getElementById('btnLabFlashcards').classList.toggle('active', tab === 'flashcards');
+  const playgroundBtn = document.getElementById('btnLabPlayground');
+  const flashcardsBtn = document.getElementById('btnLabFlashcards');
+  const playgroundPanel = document.getElementById('labPanelPlayground');
+  const flashcardsPanel = document.getElementById('labPanelFlashcards');
+
+  if (playgroundBtn) playgroundBtn.classList.toggle('active', tab === 'playground');
+  if (flashcardsBtn) flashcardsBtn.classList.toggle('active', tab === 'flashcards');
   
-  document.getElementById('labPanelVisualizer').style.display = tab === 'visualizer' ? 'block' : 'none';
-  document.getElementById('labPanelPlayground').style.display = tab === 'playground' ? 'block' : 'none';
-  document.getElementById('labPanelFlashcards').style.display = tab === 'flashcards' ? 'block' : 'none';
+  if (playgroundPanel) playgroundPanel.style.display = tab === 'playground' ? 'block' : 'none';
+  if (flashcardsPanel) flashcardsPanel.style.display = tab === 'flashcards' ? 'block' : 'none';
   
-  if (tab === 'visualizer') {
-    initVisualizer();
-  } else if (tab === 'playground') {
+  if (tab === 'playground') {
     loadCodeTemplate();
   } else if (tab === 'flashcards') {
     renderFlashcards();
   }
-}
-
-// ── 1. ALGORITHM VISUALIZER ──
-function updateVisSpeed(val) {
-  visDelay = parseInt(val);
-  document.getElementById('visSpeedVal').textContent = val;
-}
-
-function initVisualizer() {
-  if (visRunning) {
-    visStopRequested = true;
-  }
-  const algo = document.getElementById('visAlgorithmSelect').value;
-  const canvas = document.getElementById('visCanvas');
-  const title = document.getElementById('visAlgoTitle');
-  const consoleEl = document.getElementById('visConsole');
-  
-  if (!canvas) return;
-  canvas.innerHTML = '';
-  consoleEl.innerHTML = `<div class="vis-console-line">&gt; Initialized visual workspace for ${algo === 'binary' ? 'Binary Search' : algo === 'bubble' ? 'Bubble Sort' : 'Selection Sort'}.</div>`;
-  
-  if (algo === 'binary') {
-    title.textContent = "Visualizing Binary Search (Target: 62)";
-    // Sorted array
-    visData = [12, 17, 24, 32, 45, 53, 62, 70, 85, 99];
-    canvas.className = "vis-canvas binary";
-    
-    visData.forEach((val, idx) => {
-      const el = document.createElement('div');
-      el.className = 'vis-node';
-      el.id = `vis-node-${idx}`;
-      el.innerHTML = `
-        <span class="vis-node-val">${val}</span>
-        <span class="vis-node-idx">${idx}</span>
-      `;
-      canvas.appendChild(el);
-    });
-    
-    // Add Low, Mid, High pointers
-    const pointerRow = document.createElement('div');
-    pointerRow.className = 'vis-pointers';
-    pointerRow.id = 'visPointers';
-    pointerRow.style.position = 'relative';
-    pointerRow.style.width = '100%';
-    pointerRow.style.height = '32px';
-    pointerRow.style.marginTop = '12px';
-    canvas.appendChild(pointerRow);
-    
-  } else {
-    // Sorting
-    title.textContent = `Visualizing ${algo === 'bubble' ? 'Bubble Sort' : 'Selection Sort'}`;
-    canvas.className = "vis-canvas sorting";
-    
-    if (visData.length === 0 || visData.length === 10) {
-      // Generate standard array
-      visData = [55, 23, 87, 12, 42, 67, 95, 30, 15, 76];
-    }
-    
-    visData.forEach((val, idx) => {
-      const bar = document.createElement('div');
-      bar.className = 'vis-bar';
-      bar.id = `vis-bar-${idx}`;
-      bar.style.height = `${val}%`;
-      bar.innerHTML = `<span class="vis-bar-label">${val}</span>`;
-      canvas.appendChild(bar);
-    });
-  }
-  visRunning = false;
-  visStopRequested = false;
-}
-
-function generateNewVisualizerData() {
-  const algo = document.getElementById('visAlgorithmSelect').value;
-  if (algo === 'binary') {
-    // Random sorted array with 62 as a guarantee
-    let arr = [62];
-    while(arr.length < 10) {
-      let num = Math.floor(Math.random() * 90) + 10;
-      if (!arr.includes(num)) arr.push(num);
-    }
-    visData = arr.sort((a,b) => a-b);
-  } else {
-    // Fully randomized heights
-    visData = [];
-    for(let i=0; i<10; i++) {
-      visData.push(Math.floor(Math.random() * 85) + 15);
-    }
-  }
-  initVisualizer();
-}
-
-function resetVisualizer() {
-  visStopRequested = true;
-  setTimeout(() => {
-    initVisualizer();
-  }, 100);
-}
-
-// Visual helper sleep function
-const visSleep = ms => new Promise(resolve => setTimeout(resolve, ms));
-
-async function runVisualizer() {
-  if (visRunning) return;
-  visRunning = true;
-  visStopRequested = false;
-  
-  const playBtn = document.getElementById('visPlayBtn');
-  if (playBtn) playBtn.textContent = '⏸ Pause';
-  
-  const algo = document.getElementById('visAlgorithmSelect').value;
-  
-  try {
-    if (algo === 'bubble') {
-      await runBubbleSort();
-    } else if (algo === 'selection') {
-      await runSelectionSort();
-    } else if (algo === 'binary') {
-      await runBinarySearch();
-    }
-  } catch (err) {
-    console.warn('Visualizer stopped or error boundary met.');
-  }
-  
-  visRunning = false;
-  if (playBtn) playBtn.textContent = '▶ Run';
-}
-
-// BUBBLE SORT VISUALIZER LOOP
-async function runBubbleSort() {
-  const consoleEl = document.getElementById('visConsole');
-  const len = visData.length;
-  
-  for (let i = 0; i < len; i++) {
-    for (let j = 0; j < len - i - 1; j++) {
-      if (visStopRequested) throw new Error('Stop');
-      
-      const barA = document.getElementById(`vis-bar-${j}`);
-      const barB = document.getElementById(`vis-bar-${j+1}`);
-      
-      // Highlight comparing
-      barA.style.background = 'var(--accent-ml)';
-      barB.style.background = 'var(--accent-ml)';
-      consoleEl.innerHTML = `<div class="vis-console-line">&gt; Comparing Bar[${j}] (${visData[j]}) and Bar[${j+1}] (${visData[j+1]})</div>`;
-      await visSleep(visDelay);
-      
-      if (visData[j] > visData[j+1]) {
-        // Swap
-        consoleEl.innerHTML = `<div class="vis-console-line active">&gt; Swap needed! ${visData[j]} &gt; ${visData[j+1]}</div>`;
-        barA.style.background = 'var(--accent-dsa)';
-        barB.style.background = 'var(--accent-dsa)';
-        
-        let temp = visData[j];
-        visData[j] = visData[j+1];
-        visData[j+1] = temp;
-        
-        // Render Swap visually
-        barA.style.height = `${visData[j]}%`;
-        barA.querySelector('.vis-bar-label').textContent = visData[j];
-        barB.style.height = `${visData[j+1]}%`;
-        barB.querySelector('.vis-bar-label').textContent = visData[j+1];
-        
-        await visSleep(visDelay);
-      }
-      
-      barA.style.background = 'var(--bg-surface-2)';
-      barB.style.background = 'var(--bg-surface-2)';
-    }
-    
-    // Last element is sorted
-    const sortedBar = document.getElementById(`vis-bar-${len - i - 1}`);
-    if (sortedBar) sortedBar.style.background = 'var(--accent-gold)';
-  }
-  
-  consoleEl.innerHTML = `<div class="vis-console-line success">&gt; Array sorted complete! All elements aligned.</div>`;
-  shootConfetti();
-}
-
-// SELECTION SORT VISUALIZER LOOP
-async function runSelectionSort() {
-  const consoleEl = document.getElementById('visConsole');
-  const len = visData.length;
-  
-  for (let i = 0; i < len; i++) {
-    let minIdx = i;
-    const barCurrent = document.getElementById(`vis-bar-${i}`);
-    barCurrent.style.background = 'var(--accent-ml)';
-    
-    for (let j = i + 1; j < len; j++) {
-      if (visStopRequested) throw new Error('Stop');
-      
-      const barCheck = document.getElementById(`vis-bar-${j}`);
-      barCheck.style.background = 'var(--accent-rev)';
-      consoleEl.innerHTML = `<div class="vis-console-line">&gt; Checking element at index ${j} (${visData[j]}) against current min at ${minIdx} (${visData[minIdx]})</div>`;
-      await visSleep(visDelay);
-      
-      if (visData[j] < visData[minIdx]) {
-        if (minIdx !== i) {
-          const oldMin = document.getElementById(`vis-bar-${minIdx}`);
-          if (oldMin) oldMin.style.background = 'var(--bg-surface-2)';
-        }
-        minIdx = j;
-        barCheck.style.background = 'var(--accent-dsa)';
-        consoleEl.innerHTML = `<div class="vis-console-line active">&gt; New minimum element found at index ${minIdx} (${visData[minIdx]})</div>`;
-        await visSleep(visDelay);
-      } else {
-        barCheck.style.background = 'var(--bg-surface-2)';
-      }
-    }
-    
-    if (minIdx !== i) {
-      consoleEl.innerHTML = `<div class="vis-console-line active">&gt; Swapping min at index ${minIdx} with index ${i}</div>`;
-      const barMin = document.getElementById(`vis-bar-${minIdx}`);
-      
-      let temp = visData[i];
-      visData[i] = visData[minIdx];
-      visData[minIdx] = temp;
-      
-      barCurrent.style.height = `${visData[i]}%`;
-      barCurrent.querySelector('.vis-bar-label').textContent = visData[i];
-      barMin.style.height = `${visData[minIdx]}%`;
-      barMin.querySelector('.vis-bar-label').textContent = visData[minIdx];
-      
-      barMin.style.background = 'var(--bg-surface-2)';
-      await visSleep(visDelay);
-    }
-    
-    barCurrent.style.background = 'var(--accent-gold)';
-  }
-  
-  consoleEl.innerHTML = `<div class="vis-console-line success">&gt; Array sorted complete using Selection Sort!</div>`;
-  shootConfetti();
-}
-
-// BINARY SEARCH VISUALIZER LOOP
-async function runBinarySearch() {
-  const consoleEl = document.getElementById('visConsole');
-  const target = 62;
-  
-  let low = 0;
-  let high = visData.length - 1;
-  let step = 1;
-  
-  // Render pointers visually
-  function updatePointers(l, m, h) {
-    const pointerRow = document.getElementById('visPointers');
-    if (!pointerRow) return;
-    pointerRow.innerHTML = '';
-    
-    visData.forEach((_, idx) => {
-      let label = '';
-      if (idx === l) label += 'L ';
-      if (idx === m) label += 'M ';
-      if (idx === h) label += 'H';
-      
-      if (label) {
-        const ptr = document.createElement('div');
-        ptr.style.position = 'absolute';
-        ptr.style.left = `calc(${(idx / 10) * 100}% + 4px)`;
-        ptr.style.fontFamily = "'JetBrains Mono', monospace";
-        ptr.style.fontSize = "10px";
-        ptr.style.fontWeight = "700";
-        ptr.style.color = idx === m ? "var(--accent-gold)" : idx === l ? "var(--accent-dsa)" : "var(--accent-ml)";
-        ptr.textContent = label.trim();
-        pointerRow.appendChild(ptr);
-      }
-    });
-  }
-  
-  while (low <= high) {
-    if (visStopRequested) throw new Error('Stop');
-    
-    let mid = Math.floor((low + high) / 2);
-    updatePointers(low, mid, high);
-    
-    // Highlight active range
-    for (let k = 0; k < visData.length; k++) {
-      const node = document.getElementById(`vis-node-${k}`);
-      if (node) {
-        if (k >= low && k <= high) {
-          node.style.background = 'var(--bg-surface-2)';
-          node.style.borderColor = 'var(--border-2)';
-        } else {
-          node.style.background = 'transparent';
-          node.style.opacity = '0.3';
-        }
-      }
-    }
-    
-    const midNode = document.getElementById(`vis-node-${mid}`);
-    if (midNode) midNode.style.background = 'var(--bg-hover)';
-    
-    consoleEl.innerHTML = `<div class="vis-console-line">&gt; [Step ${step++}] low = ${low}, high = ${high}, mid = ${mid} (Val: ${visData[mid]})</div>`;
-    await visSleep(visDelay * 1.5);
-    
-    if (visData[mid] === target) {
-      if (midNode) {
-        midNode.style.background = 'var(--accent-gold)';
-        midNode.style.borderColor = 'var(--accent-gold)';
-      }
-      consoleEl.innerHTML = `<div class="vis-console-line success">&gt; Target FOUND! Element 62 found at index ${mid}.</div>`;
-      shootConfetti();
-      return;
-    }
-    
-    if (visData[mid] < target) {
-      consoleEl.innerHTML = `<div class="vis-console-line active">&gt; mid val (${visData[mid]}) &lt; target (62). Ignore left half. low moves to ${mid + 1}.</div>`;
-      low = mid + 1;
-    } else {
-      consoleEl.innerHTML = `<div class="vis-console-line active">&gt; mid val (${visData[mid]}) &gt; target (62). Ignore right half. high moves to ${mid - 1}.</div>`;
-      high = mid - 1;
-    }
-    
-    await visSleep(visDelay * 1.5);
-  }
-  
-  consoleEl.innerHTML = `<div class="vis-console-line error">&gt; Target element 62 not found in search bounds.</div>`;
 }
 
 // ── 2. CODE PLAYGROUND ──
@@ -2330,6 +2124,15 @@ function init() {
   if (typeof getChecklistData() === 'undefined' || typeof SCHEDULE_DATA === 'undefined') {
     console.warn('Data not loaded yet. Some features may not work.');
   }
+
+  // Visibility change listener to handle background tab timer counting accurately
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      if (timerIsRunning) {
+        updateTimerTick();
+      }
+    }
+  });
 }
 
 if (document.readyState === 'loading') {

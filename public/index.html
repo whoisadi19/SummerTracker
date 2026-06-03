@@ -407,9 +407,18 @@
           <!-- Timer Area -->
           <div class="res-card" style="display:flex; flex-direction:column; align-items:center; padding: 40px 24px; gap: 24px;">
             <!-- Mode buttons -->
-            <div class="pomo-presets" style="width: auto;">
-              <button class="pomo-preset active" id="pomoBtnWork" onclick="setPomodoroMode('work', this)">Work (25m)</button>
-              <button class="pomo-preset" id="pomoBtnBreak" onclick="setPomodoroMode('break', this)">Break (5m)</button>
+            <div class="pomo-presets" style="width: 100%; display: flex; gap: 8px;">
+              <button class="pomo-preset active" id="timerModePomo" onclick="setTimerMode('pomodoro')">Pomodoro (25m)</button>
+              <button class="pomo-preset" id="timerModeCustom" onclick="setTimerMode('custom')">Custom Timer</button>
+            </div>
+
+            <!-- Custom Timer Inputs (hidden by default) -->
+            <div id="customTimerInputs" style="display: none; flex-direction: column; gap: 8px; width: 100%; align-items: center; justify-content: center; margin-top: -8px;">
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <label class="form-label" style="margin: 0; font-size: 13px;">Target time (optional):</label>
+                <input type="number" id="customTargetMinutes" class="form-input" min="1" placeholder="e.g. 50" style="width: 80px; padding: 6px 10px; background: var(--bg-surface-2); text-align: center;">
+                <span style="font-size: 13px; color: var(--text-muted);">mins</span>
+              </div>
             </div>
 
             <!-- Subject Display -->
@@ -568,63 +577,13 @@
             <h1 class="view-title">Coding & Visual <span class="c-dsa">Lab</span></h1>
           </div>
           <div class="lab-tabs-container">
-            <button class="lab-tab-btn active" id="btnLabVisualizer" onclick="switchLabTab('visualizer')">📈 Visualizer</button>
-            <button class="lab-tab-btn" id="btnLabPlayground" onclick="switchLabTab('playground')">💻 Playground</button>
+            <button class="lab-tab-btn active" id="btnLabPlayground" onclick="switchLabTab('playground')">💻 Playground</button>
             <button class="lab-tab-btn" id="btnLabFlashcards" onclick="switchLabTab('flashcards')">🧠 Flashcards</button>
           </div>
         </div>
 
-        <!-- LAB AREA: VISUALIZER -->
-        <div class="lab-panel active" id="labPanelVisualizer">
-          <div style="display:grid; grid-template-columns: 280px 1fr; gap:24px; margin-top: 24px;" class="pomo-grid-layout">
-            <!-- Settings card -->
-            <div class="res-card" style="display:flex; flex-direction:column; gap:16px;">
-              <h3 class="lab-card-title" style="font-family:'Syne',sans-serif; font-size:15px; font-weight:700; color:var(--text-primary);">Settings</h3>
-              
-              <div class="form-group">
-                <label class="form-label" for="visAlgorithmSelect">Algorithm</label>
-                <select id="visAlgorithmSelect" class="form-input" onchange="initVisualizer()" style="background:var(--bg-surface-2); font-family:inherit;">
-                  <option value="bubble">Bubble Sort</option>
-                  <option value="selection">Selection Sort</option>
-                  <option value="binary">Binary Search</option>
-                </select>
-              </div>
-
-              <!-- Controls -->
-              <div style="display:flex; flex-direction:column; gap:12px; margin-top:8px;">
-                <div style="display:flex; gap:8px;">
-                  <button class="res-btn primary" id="visPlayBtn" onclick="runVisualizer()" style="flex:1;">▶ Run</button>
-                  <button class="res-btn secondary" onclick="resetVisualizer()" style="flex:1;">↺ Reset</button>
-                </div>
-                <div style="display:flex; flex-direction:column; gap:6px;">
-                  <label class="form-label">Speed (Delay: <span id="visSpeedVal">300</span>ms)</label>
-                  <input type="range" id="visSpeedRange" min="50" max="1000" value="300" oninput="updateVisSpeed(this.value)" style="width:100%; accent-color:var(--accent-dsa);">
-                </div>
-              </div>
-
-              <!-- Extra actions -->
-              <button class="res-btn secondary" id="visRandomizeBtn" onclick="generateNewVisualizerData()" style="width:100%;">⚡ Randomize Data</button>
-            </div>
-
-            <!-- Visualization Canvas -->
-            <div class="res-card" style="display:flex; flex-direction:column; min-height:400px; justify-content:space-between; gap:24px;">
-              <h3 class="lab-card-title" id="visAlgoTitle" style="font-family:'Syne',sans-serif; font-size:16px; font-weight:700; color:var(--text-primary);">Visualizing Bubble Sort</h3>
-              
-              <!-- Core Container for visual bars/nodes -->
-              <div class="vis-canvas" id="visCanvas">
-                <!-- Visual Nodes inserted by JS -->
-              </div>
-
-              <!-- Execution Step Logger (Premium Console look!) -->
-              <div class="vis-console" id="visConsole">
-                <div class="vis-console-line">&gt; Select Run to begin algorithm animation...</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
         <!-- LAB AREA: PLAYGROUND -->
-        <div class="lab-panel" id="labPanelPlayground" style="display:none;">
+        <div class="lab-panel active" id="labPanelPlayground">
           <div style="display:grid; grid-template-columns: 280px 1fr; gap:24px; margin-top: 24px;" class="pomo-grid-layout">
             <!-- Language selector -->
             <div class="res-card" style="display:flex; flex-direction:column; gap:16px;">
