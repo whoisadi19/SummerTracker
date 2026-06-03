@@ -176,6 +176,7 @@ function navigate(view) {
   });
 
   if (view === 'dashboard') renderDashboard();
+  else if (view === 'pacing') renderPacingTab();
   else if (view === 'schedule') renderSchedule();
   else if (view === 'checklist') renderChecklist();
   else if (view === 'resources') renderResources();
@@ -924,118 +925,121 @@ function renderDashboard() {
   document.getElementById('xpText').textContent = `${currentXP} / 100 XP`;
   document.getElementById('xpBar').style.width = currentXP + '%';
 
-  // Dynamic Motivation Banner calculations to track schedule pace
+  renderHeatmap();
+  // updatePomodoroUI(); (handled in Pomodoro tab)
+}
+
+function renderPacingTab() {
+  const info = getTodayInfo();
+  const progress = getProgress();
+  const pacingContentEl = document.getElementById('pacingCoachDetailedContent');
+  if (!pacingContentEl) return;
+
   const remaining = progress.overall.total - progress.overall.done;
   const daysCount = Math.max(1, info.daysLeft);
   const tasksPerDay = Math.ceil(remaining / daysCount);
-  const motivationDescEl = document.getElementById('motivationDesc');
-  
-  if (motivationDescEl) {
-    if (remaining === 0) {
-      motivationDescEl.innerHTML = `
-        <div class="insight-container">
-          <div class="insight-pacing-text">
-            🏆 <strong>Curriculum Fully Completed!</strong> Phenomenal job completing all <strong>${progress.overall.total}</strong> tasks! You've built a stellar foundation in DSA and Machine Learning. Enjoy your summer!
-          </div>
-        </div>
-      `;
-    } else if (info.isFuture) {
-      motivationDescEl.innerHTML = `
-        <div class="insight-container">
-          <div class="insight-pacing-text">
-            📅 <strong>Preparation Mode:</strong> The summer schedule kicks off in <strong>${Math.abs(info.dayIndex)}</strong> days. To complete all <strong>${progress.overall.total}</strong> tasks on time, your target pace will be <strong>${tasksPerDay}</strong> task${tasksPerDay > 1 ? 's' : ''} per day once we begin.
-          </div>
-        </div>
-      `;
-    } else if (info.isPast) {
-      motivationDescEl.innerHTML = `
-        <div class="insight-container">
-          <div class="insight-pacing-text">
-            ⌛ <strong>Schedule Concluded:</strong> The formal summer term ended on July 5, 2026. You have <strong>${remaining}</strong> task${remaining > 1 ? 's' : ''} remaining. Try to finish at a pace of <strong>${tasksPerDay}</strong> task${tasksPerDay > 1 ? 's' : ''}/day to wrap up the curriculum!
-          </div>
-        </div>
-      `;
-    } else {
-      const dayIndexBounded = Math.max(0, Math.min(TOTAL_DAYS - 1, info.dayIndex));
-      const targetCompleted = Math.min(progress.overall.total, getScheduleTargetTasks(dayIndexBounded));
-      const weekNumBounded = Math.max(1, Math.min(6, info.weekIndex + 1));
-      const weekPacing = getCurrentWeekPacingInfo(weekNumBounded);
-      const { nextDsa, nextMl } = getNextFocusTasks();
 
-      // Determine coaching narrative & strategy
-      let narrativeHtml = "";
-      if (progress.overall.done >= targetCompleted) {
-        const aheadBy = progress.overall.done - targetCompleted;
-        if (aheadBy >= 5) {
-          narrativeHtml = `🔥 <strong>Incredible speed!</strong> You are <strong>${aheadBy}</strong> tasks ahead of schedule. Keep this up or take a lighter load today. Maintaining <strong>${tasksPerDay}</strong> task${tasksPerDay > 1 ? 's' : ''}/day will keep you coasting.`;
-        } else {
-          narrativeHtml = `✨ <strong>Perfect pacing!</strong> You are right on track with your goals (target: <strong>${targetCompleted}</strong>). Keep doing about <strong>${tasksPerDay}</strong> task${tasksPerDay > 1 ? 's' : ''}/day to finish comfortably.`;
-        }
+  if (remaining === 0) {
+    pacingContentEl.innerHTML = `
+      <div class="insight-container">
+        <div class="insight-pacing-text" style="font-size: 14px;">
+          🏆 <strong>Curriculum Fully Completed!</strong> Phenomenal job completing all <strong>${progress.overall.total}</strong> tasks! You've built a stellar foundation in DSA and Machine Learning. Enjoy your summer!
+        </div>
+      </div>
+    `;
+  } else if (info.isFuture) {
+    pacingContentEl.innerHTML = `
+      <div class="insight-container">
+        <div class="insight-pacing-text" style="font-size: 14px;">
+          📅 <strong>Preparation Mode:</strong> The summer schedule kicks off in <strong>${Math.abs(info.dayIndex)}</strong> days. To complete all <strong>${progress.overall.total}</strong> tasks on time, your target pace will be <strong>${tasksPerDay}</strong> task${tasksPerDay > 1 ? 's' : ''} per day once we begin.
+        </div>
+      </div>
+    `;
+  } else if (info.isPast) {
+    pacingContentEl.innerHTML = `
+      <div class="insight-container">
+        <div class="insight-pacing-text" style="font-size: 14px;">
+          ⌛ <strong>Schedule Concluded:</strong> The formal summer term ended on July 5, 2026. You have <strong>${remaining}</strong> task${remaining > 1 ? 's' : ''} remaining. Try to finish at a pace of <strong>${tasksPerDay}</strong> task${tasksPerDay > 1 ? 's' : ''}/day to wrap up the curriculum!
+        </div>
+      </div>
+    `;
+  } else {
+    const dayIndexBounded = Math.max(0, Math.min(TOTAL_DAYS - 1, info.dayIndex));
+    const targetCompleted = Math.min(progress.overall.total, getScheduleTargetTasks(dayIndexBounded));
+    const weekNumBounded = Math.max(1, Math.min(6, info.weekIndex + 1));
+    const weekPacing = getCurrentWeekPacingInfo(weekNumBounded);
+    const { nextDsa, nextMl } = getNextFocusTasks();
+
+    // Determine coaching narrative & strategy
+    let narrativeHtml = "";
+    if (progress.overall.done >= targetCompleted) {
+      const aheadBy = progress.overall.done - targetCompleted;
+      if (aheadBy >= 5) {
+        narrativeHtml = `🔥 <strong>Incredible speed!</strong> You are <strong>${aheadBy}</strong> tasks ahead of schedule. Keep this up or take a lighter load today. Maintaining <strong>${tasksPerDay}</strong> task${tasksPerDay > 1 ? 's' : ''}/day will keep you coasting.`;
       } else {
-        const behindBy = targetCompleted - progress.overall.done;
-        if (behindBy > 5) {
-          narrativeHtml = `⏳ <strong>Let's catch up step-by-step:</strong> You are behind schedule by <strong>${behindBy}</strong> tasks (target: <strong>${targetCompleted}</strong>). To get back on track comfortably, aim for <strong>${tasksPerDay}</strong> tasks/day. Focus on checking off just 1 extra task per session!`;
-        } else {
-          narrativeHtml = `⏳ <strong>Slightly behind pace:</strong> You are only <strong>${behindBy}</strong> task${behindBy > 1 ? 's' : ''} behind your target of <strong>${targetCompleted}</strong>. Completing <strong>${tasksPerDay}</strong> tasks today will bridge the gap!`;
-        }
+        narrativeHtml = `✨ <strong>Perfect pacing!</strong> You are right on track with your goals (target: <strong>${targetCompleted}</strong>). Keep doing about <strong>${tasksPerDay}</strong> task${tasksPerDay > 1 ? 's' : ''}/day to finish comfortably.`;
       }
+    } else {
+      const behindBy = targetCompleted - progress.overall.done;
+      if (behindBy > 5) {
+        narrativeHtml = `⏳ <strong>Let's catch up step-by-step:</strong> You are behind schedule by <strong>${behindBy}</strong> tasks (target: <strong>${targetCompleted}</strong>). To get back on track comfortably, aim for <strong>${tasksPerDay}</strong> tasks/day. Focus on checking off just 1 extra task per session!`;
+      } else {
+        narrativeHtml = `⏳ <strong>Slightly behind pace:</strong> You are only <strong>${behindBy}</strong> task${behindBy > 1 ? 's' : ''} behind your target of <strong>${targetCompleted}</strong>. Completing <strong>${tasksPerDay}</strong> tasks today will bridge the gap!`;
+      }
+    }
 
-      // Build Next Steps HTML if tasks are incomplete
-      let nextStepsHtml = "";
-      if (nextDsa || nextMl) {
-        let rows = "";
-        if (nextDsa) {
-          rows += `
-            <div class="insight-next-row">
-              <span class="insight-badge dsa">DSA</span>
-              <div class="insight-next-content">
-                <span class="insight-next-topic">${nextDsa.unitTitle}:</span>
-                <span class="insight-next-task">${nextDsa.taskText}</span>
-              </div>
+    // Build Next Steps HTML if tasks are incomplete
+    let nextStepsHtml = "";
+    if (nextDsa || nextMl) {
+      let rows = "";
+      if (nextDsa) {
+        rows += `
+          <div class="insight-next-row">
+            <span class="insight-badge dsa">DSA</span>
+            <div class="insight-next-content">
+              <span class="insight-next-topic">${nextDsa.unitTitle}:</span>
+              <span class="insight-next-task">${nextDsa.taskText}</span>
             </div>
-          `;
-        }
-        if (nextMl) {
-          rows += `
-            <div class="insight-next-row">
-              <span class="insight-badge ml">ML</span>
-              <div class="insight-next-content">
-                <span class="insight-next-topic">${nextMl.unitTitle}:</span>
-                <span class="insight-next-task">${nextMl.taskText}</span>
-              </div>
-            </div>
-          `;
-        }
-        nextStepsHtml = `
-          <div class="insight-next-focus">
-            <div class="insight-next-title">🎯 Recommended Next Focus</div>
-            ${rows}
           </div>
         `;
       }
-
-      motivationDescEl.innerHTML = `
-        <div class="insight-container">
-          <div class="insight-pacing-text">${narrativeHtml}</div>
-          
-          <div class="insight-progress-section">
-            <div class="insight-progress-header">
-              <span>📅 Week ${weekNumBounded} Goal (${weekPacing.dates})</span>
-              <span class="insight-progress-val">${weekPacing.done} / ${weekPacing.total} Tasks (${weekPacing.pct}%)</span>
-            </div>
-            <div class="cprog-bar">
-              <div class="cprog-fill rev" style="width: ${weekPacing.pct}%;"></div>
+      if (nextMl) {
+        rows += `
+          <div class="insight-next-row">
+            <span class="insight-badge ml">ML</span>
+            <div class="insight-next-content">
+              <span class="insight-next-topic">${nextMl.unitTitle}:</span>
+              <span class="insight-next-task">${nextMl.taskText}</span>
             </div>
           </div>
-
-          ${nextStepsHtml}
+        `;
+      }
+      nextStepsHtml = `
+        <div class="insight-next-focus" style="margin-top: 6px;">
+          <div class="insight-next-title">🎯 Recommended Next Focus</div>
+          ${rows}
         </div>
       `;
     }
-  }
 
-  renderHeatmap();
-  // updatePomodoroUI(); (handled in Pomodoro tab)
+    pacingContentEl.innerHTML = `
+      <div class="insight-container">
+        <div class="insight-pacing-text" style="font-size: 14px; line-height: 1.6;">${narrativeHtml}</div>
+        
+        <div class="insight-progress-section" style="margin-top: 6px;">
+          <div class="insight-progress-header">
+            <span>📅 Week ${weekNumBounded} Goal (${weekPacing.dates})</span>
+            <span class="insight-progress-val">${weekPacing.done} / ${weekPacing.total} Tasks (${weekPacing.pct}%)</span>
+          </div>
+          <div class="cprog-bar">
+            <div class="cprog-fill rev" style="width: ${weekPacing.pct}%;"></div>
+          </div>
+        </div>
+
+        ${nextStepsHtml}
+      </div>
+    `;
+  }
 }
 
 function renderHeatmap() {

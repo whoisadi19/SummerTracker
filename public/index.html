@@ -26,6 +26,10 @@
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
         <span>Dashboard</span>
       </button>
+      <button class="nav-item" data-view="pacing" onclick="navigate('pacing')">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+        <span>Pacing Coach</span>
+      </button>
       <button class="nav-item" data-view="schedule" onclick="navigate('schedule')">
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
         <span>Schedule</span>
@@ -76,6 +80,10 @@
     <button class="mob-nav-item active" data-view="dashboard" onclick="navigate('dashboard')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
       <span>Home</span>
+    </button>
+    <button class="mob-nav-item" data-view="pacing" onclick="navigate('pacing')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+      <span>Pacing</span>
     </button>
     <button class="mob-nav-item" data-view="schedule" onclick="navigate('schedule')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
@@ -243,17 +251,39 @@
               </div>
             </div>
 
-            <div class="motivation-banner">
-              <div class="motivation-icon">⚡</div>
-              <div class="motivation-content">
-                <h4 class="motivation-title">Intelligent Summer Study Hub</h4>
-                <p class="motivation-desc" id="motivationDesc">Your daily curriculum is structured for a 6–7 hours afternoon & evening study routine. Maintain consistency to unlock custom XP rewards and build your streak.</p>
-              </div>
-            </div>
 
           </div>
         </div>
 
+      </div>
+    </section>
+
+    <!-- ─── PACING VIEW ─── -->
+    <section class="view" id="view-pacing">
+      <div class="view-container">
+        <div class="view-header">
+          <div>
+            <div class="view-eyebrow">INTELLIGENT COACHING ENGINE</div>
+            <h1 class="view-title">Pacing <span class="c-rev">Coach</span></h1>
+          </div>
+          <div class="schedule-meta">
+            <span>Schedule-based pacing analytics & next recommended steps</span>
+          </div>
+        </div>
+
+        <div class="pacing-view-content" style="margin-top: 24px; display: grid; grid-template-columns: 1fr; gap: 24px; max-width: 800px;">
+          <!-- Pacing Coach Card -->
+          <div class="res-card" style="padding: 28px;">
+            <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 20px;">
+              <div class="motivation-icon" style="font-size: 24px; width: 48px; height: 48px; border-radius: 12px; background: rgba(240, 176, 41, 0.1); color: var(--accent-gold); display: flex; align-items: center; justify-content: center;">🧭</div>
+              <h3 style="font-family:'Syne',sans-serif; font-size:18px; color:var(--text-primary);">Your Personalized Pacing Analysis</h3>
+            </div>
+            
+            <div id="pacingCoachDetailedContent">
+              <!-- Dynamically populated by JS -->
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 
