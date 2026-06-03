@@ -810,6 +810,30 @@ function renderDashboard() {
   document.getElementById('xpText').textContent = `${currentXP} / 100 XP`;
   document.getElementById('xpBar').style.width = currentXP + '%';
 
+  // Dynamic Motivation Banner calculations to track schedule pace
+  const remaining = progress.overall.total - progress.overall.done;
+  const daysCount = Math.max(1, info.daysLeft);
+  const tasksPerDay = Math.ceil(remaining / daysCount);
+  const motivationDescEl = document.getElementById('motivationDesc');
+  if (motivationDescEl) {
+    if (remaining === 0) {
+      motivationDescEl.innerHTML = `🎉 <strong>Congratulations!</strong> You have fully completed all ${progress.overall.total} curriculum tasks. Phenomenal job keeping up with your schedule!`;
+    } else if (info.isFuture) {
+      motivationDescEl.innerHTML = `Your summer curriculum starts in <strong>${Math.abs(info.dayIndex)}</strong> days. To finish all <strong>${progress.overall.total}</strong> tasks on time, you should aim to complete about <strong>${tasksPerDay}</strong> task${tasksPerDay > 1 ? 's' : ''} per day once it begins.`;
+    } else if (info.isPast) {
+      motivationDescEl.innerHTML = `The summer schedule has officially ended. You have <strong>${remaining}</strong> task${remaining > 1 ? 's' : ''} remaining. Try to complete them as soon as possible to finish your curriculum!`;
+    } else {
+      const dayIndex = Math.max(0, Math.min(TOTAL_DAYS, info.dayIndex));
+      const targetCompleted = Math.min(progress.overall.total, Math.round((dayIndex / TOTAL_DAYS) * progress.overall.total));
+      if (progress.overall.done >= targetCompleted) {
+        motivationDescEl.innerHTML = `You are <strong>on track</strong> (completed <strong>${progress.overall.done}</strong> of <strong>${progress.overall.total}</strong> tasks, target: <strong>${targetCompleted}</strong>). To finish your remaining <strong>${remaining}</strong> tasks in the next <strong>${info.daysLeft}</strong> days, you need to complete <strong>${tasksPerDay}</strong> task${tasksPerDay > 1 ? 's' : ''} per day.`;
+      } else {
+        const behindBy = targetCompleted - progress.overall.done;
+        motivationDescEl.innerHTML = `You are behind schedule by <strong>${behindBy}</strong> task${behindBy > 1 ? 's' : ''} (completed <strong>${progress.overall.done}</strong>, target: <strong>${targetCompleted}</strong>). To catch up and finish your remaining <strong>${remaining}</strong> tasks on time, you need to complete <strong>${tasksPerDay}</strong> task${tasksPerDay > 1 ? 's' : ''} per day.`;
+      }
+    }
+  }
+
   renderHeatmap();
   // updatePomodoroUI(); (handled in Pomodoro tab)
 }
