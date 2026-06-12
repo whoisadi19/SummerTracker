@@ -163,7 +163,25 @@ app.post('/api/progress', authenticateJWT, async (req, res) => {
     return res.status(503).json({ error: 'Database offline.' });
   }
 
-  const { completed, streak, bestStreak, lastActiveDate, xp, heatmap, notes, theme, studySessions, subjects, customResources, quickNotes, quickNotesPinned } = req.body;
+  const {
+    completed,
+    streak,
+    bestStreak,
+    lastActiveDate,
+    xp,
+    heatmap,
+    notes,
+    theme,
+    studySessions,
+    subjects,
+    customResources,
+    quickNotes,
+    quickNotesPinned,
+    checklistData,
+    deletedSessionIds,
+    deletedResourceIds,
+    deletedChecklistItemIds
+  } = req.body;
 
   try {
     const progress = await Progress.findOneAndUpdate(
@@ -182,7 +200,12 @@ app.post('/api/progress', authenticateJWT, async (req, res) => {
           subjects: subjects || ['DSA', 'ML'],
           customResources: customResources || [],
           quickNotes: quickNotes !== undefined ? quickNotes : '',
-          quickNotesPinned: quickNotesPinned !== undefined ? quickNotesPinned : false
+          quickNotesPinned: quickNotesPinned !== undefined ? quickNotesPinned : false,
+          checklistData: checklistData || null,
+          deletedSessionIds: deletedSessionIds || [],
+          deletedResourceIds: deletedResourceIds || [],
+          deletedChecklistItemIds: deletedChecklistItemIds || [],
+          updatedAt: new Date()
         }
       },
       { new: true, upsert: true }

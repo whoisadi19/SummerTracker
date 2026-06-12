@@ -11,7 +11,8 @@ let appState = loadState();
 function loadState() {
   let state = { 
     completed: {}, theme: 'cyber', streak: 0, bestStreak: 0, lastActiveDate: null, xp: 0, heatmap: {}, notes: {}, checklistData: null,
-    quickNotes: '', quickNotesPinned: false
+    quickNotes: '', quickNotesPinned: false,
+    deletedSessionIds: [], deletedResourceIds: [], deletedChecklistItemIds: []
   };
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -31,6 +32,9 @@ function loadState() {
   }
   if (!state.subjects) state.subjects = ['DSA', 'ML'];
   if (!state.studySessions) state.studySessions = [];
+  if (!state.deletedSessionIds) state.deletedSessionIds = [];
+  if (!state.deletedResourceIds) state.deletedResourceIds = [];
+  if (!state.deletedChecklistItemIds) state.deletedChecklistItemIds = [];
   return state;
 }
 
@@ -63,7 +67,11 @@ async function syncCloudProgress() {
         subjects: appState.subjects,
         customResources: appState.customResources,
         quickNotes: appState.quickNotes,
-        quickNotesPinned: appState.quickNotesPinned
+        quickNotesPinned: appState.quickNotesPinned,
+        checklistData: appState.checklistData,
+        deletedSessionIds: appState.deletedSessionIds,
+        deletedResourceIds: appState.deletedResourceIds,
+        deletedChecklistItemIds: appState.deletedChecklistItemIds
       })
     });
     if (res.status === 403) {
@@ -88,6 +96,11 @@ async function fetchCloudProgress() {
     if (res.ok) {
       const cloudData = await res.json();
       
+      // Merge tombstones
+      appState.deletedSessionIds = Array.from(new Set([...(appState.deletedSessionIds || []), ...(cloudData.deletedSessionIds || [])]));
+      appState.deletedResourceIds = Array.from(new Set([...(appState.deletedResourceIds || []), ...(cloudData.deletedResourceIds || [])]));
+      appState.deletedChecklistItemIds = Array.from(new Set([...(appState.deletedChecklistItemIds || []), ...(cloudData.deletedChecklistItemIds || [])]));
+
       // Safe merge: take checked items from either local or cloud
       const mergedCompleted = { ...appState.completed, ...(cloudData.completed || {}) };
       
@@ -99,7 +112,7 @@ async function fetchCloudProgress() {
       appState.heatmap = { ...(appState.heatmap || {}), ...(cloudData.heatmap || {}) };
       appState.notes = { ...(appState.notes || {}), ...(cloudData.notes || {}) };
       
-       if (cloudData.theme) appState.theme = cloudData.theme;
+      if (cloudData.theme) appState.theme = cloudData.theme;
       if (cloudData.quickNotes !== undefined) appState.quickNotes = cloudData.quickNotes;
       if (cloudData.quickNotesPinned !== undefined) appState.quickNotesPinned = cloudData.quickNotesPinned;
 
@@ -109,7 +122,9 @@ async function fetchCloudProgress() {
       const sessionMap = new Map();
       localSessions.forEach(s => { if (s && s.id) sessionMap.set(s.id, s); });
       cloudSessions.forEach(s => { if (s && s.id) sessionMap.set(s.id, s); });
-      appState.studySessions = Array.from(sessionMap.values()).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+      appState.studySessions = Array.from(sessionMap.values())
+        .filter(s => s && s.id && !appState.deletedSessionIds.includes(s.id))
+        .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
       // Safe merge subjects using Set
       const localSubjects = appState.subjects || ['DSA', 'ML'];
@@ -123,7 +138,66 @@ async function fetchCloudProgress() {
       const resourceMap = new Map();
       localResources.forEach(r => { if (r && r.id) resourceMap.set(r.id, r); });
       cloudResources.forEach(r => { if (r && r.id) resourceMap.set(r.id, r); });
-      appState.customResources = Array.from(resourceMap.values());
+      appState.customResources = Array.from(resourceMap.values())
+        .filter(r => r && r.id && !appState.deletedResourceIds.includes(r.id));
+
+      // Safe merge checklistData
+      const cloudChecklist = cloudData.checklistData;
+      if (cloudChecklist) {
+        const localChecklist = getChecklistData() || { dsa: [], ml: [] };
+        
+        ['dsa', 'ml'].forEach(tab => {
+          if (!localChecklist[tab]) localChecklist[tab] = [];
+          if (!cloudChecklist[tab]) cloudChecklist[tab] = [];
+          
+          cloudChecklist[tab].forEach(cWeek => {
+            let lWeek = localChecklist[tab].find(w => w.week === cWeek.week);
+            if (!lWeek) {
+              lWeek = { week: cWeek.week, dates: cWeek.dates, units: [] };
+              localChecklist[tab].push(lWeek);
+            }
+            
+            cWeek.units.forEach(cUnit => {
+              let lUnit = lWeek.units.find(u => u.title === cUnit.title);
+              if (!lUnit) {
+                lUnit = { title: cUnit.title, items: [] };
+                lWeek.units.push(lUnit);
+              }
+              
+              cUnit.items.forEach(cItem => {
+                if (cItem && cItem.id) {
+                  const existing = lUnit.items.find(i => i.id === cItem.id);
+                  if (!existing) {
+                    lUnit.items.push(cItem);
+                  } else {
+                    existing.text = cItem.text;
+                    existing.tags = cItem.tags || [];
+                  }
+                }
+              });
+            });
+          });
+          
+          localChecklist[tab].sort((a, b) => a.week - b.week);
+          
+          localChecklist[tab].forEach(week => {
+            week.units.forEach(unit => {
+              unit.items = unit.items.filter(item => item && item.id && !appState.deletedChecklistItemIds.includes(item.id));
+            });
+          });
+        });
+        appState.checklistData = localChecklist;
+      } else if (appState.checklistData) {
+        ['dsa', 'ml'].forEach(tab => {
+          if (appState.checklistData[tab]) {
+            appState.checklistData[tab].forEach(week => {
+              week.units.forEach(unit => {
+                unit.items = unit.items.filter(item => item && item.id && !appState.deletedChecklistItemIds.includes(item.id));
+              });
+            });
+          }
+        });
+      }
 
       // Save locally and refresh frontend
       localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
@@ -203,15 +277,18 @@ function getTodayInfo() {
   const start = new Date(START_DATE);
   const end = new Date(END_DATE);
 
-  const diffMs = today - start;
-  const dayIndex = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const utcToday = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+  const utcStart = Date.UTC(start.getFullYear(), start.getMonth(), start.getDate());
+  const utcEnd = Date.UTC(end.getFullYear(), end.getMonth(), end.getDate());
+
+  const dayIndex = Math.floor((utcToday - utcStart) / (1000 * 60 * 60 * 24));
   const weekIndex = Math.floor(dayIndex / 7);
 
   const isActive = today >= start && today <= end;
   const isPast = today > end;
   const isFuture = today < start;
 
-  const daysLeft = Math.max(0, Math.ceil((end - today) / (1000 * 60 * 60 * 24)));
+  const daysLeft = Math.max(0, Math.floor((utcEnd - utcToday) / (1000 * 60 * 60 * 24)));
 
   return { today, dayIndex, weekIndex, isActive, isPast, isFuture, daysLeft };
 }
@@ -1375,6 +1452,10 @@ function deleteChecklistItem(tab, weekNum, unitTitle, itemId, e) {
   const unit = week.units.find(u => u.title === unitTitle);
   unit.items = unit.items.filter(i => i.id !== itemId);
   delete appState.completed[itemId];
+  
+  if (!appState.deletedChecklistItemIds) appState.deletedChecklistItemIds = [];
+  appState.deletedChecklistItemIds.push(itemId);
+  
   saveState();
   renderChecklistContent();
   updateChecklistProgress();
@@ -1490,7 +1571,14 @@ function selectPomoSubject(subject) {
 function addCustomSubject() {
   const input = document.getElementById('pomoNewSubjectInput');
   const name = input.value.trim();
-  if (!name) return;
+  if (!name) {
+    showToast('Subject name cannot be empty!');
+    return;
+  }
+  if (name.length > 25) {
+    showToast('Subject name is too long! Max 25 characters.');
+    return;
+  }
   
   if (!appState.subjects) appState.subjects = ['DSA', 'ML'];
   
@@ -1636,6 +1724,10 @@ function deleteStudySession(id, e) {
   e.stopPropagation();
   if (!confirm('Are you sure you want to delete this study session? This will recalculate all study insights.')) return;
   appState.studySessions = (appState.studySessions || []).filter(s => s.id !== id);
+  
+  if (!appState.deletedSessionIds) appState.deletedSessionIds = [];
+  appState.deletedSessionIds.push(id);
+  
   saveState();
   renderInsightsTab();
   if (typeof renderDashboard === 'function') renderDashboard();
@@ -1740,6 +1832,31 @@ function handleResourceSubmit(e) {
   const desc = document.getElementById('resDesc').value.trim();
   const category = document.getElementById('resCategory').value;
 
+  if (!title) {
+    showToast('Resource title cannot be empty!');
+    return;
+  }
+  if (title.length > 50) {
+    showToast('Resource title is too long! Max 50 characters.');
+    return;
+  }
+  if (!url) {
+    showToast('Resource URL cannot be empty!');
+    return;
+  }
+  if (url.length > 250) {
+    showToast('Resource URL is too long! Max 250 characters.');
+    return;
+  }
+  if (!/^https?:\/\/\S+/i.test(url)) {
+    showToast('Invalid URL! Must start with http:// or https://');
+    return;
+  }
+  if (desc.length > 200) {
+    showToast('Resource description is too long! Max 200 characters.');
+    return;
+  }
+
   const items = getResources();
 
   if (id) {
@@ -1783,6 +1900,10 @@ function deleteResource(id, e) {
   e.stopPropagation();
   if (!confirm('Are you sure you want to delete this resource?')) return;
   appState.customResources = getResources().filter(r => r.id !== id);
+  
+  if (!appState.deletedResourceIds) appState.deletedResourceIds = [];
+  appState.deletedResourceIds.push(id);
+  
   saveState();
   renderResources();
   showToast('Resource deleted!');

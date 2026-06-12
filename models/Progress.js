@@ -62,6 +62,22 @@ const ProgressSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  checklistData: {
+    type: mongoose.Schema.Types.Mixed,
+    default: null
+  },
+  deletedSessionIds: {
+    type: [String],
+    default: []
+  },
+  deletedResourceIds: {
+    type: [String],
+    default: []
+  },
+  deletedChecklistItemIds: {
+    type: [String],
+    default: []
+  },
   updatedAt: {
     type: Date,
     default: Date.now
