@@ -208,6 +208,7 @@ async function fetchCloudProgress() {
       
       syncQuickNotesUI();
       renderUserWidget();
+      syncCloudProgress(); // Sync the merged results back to the cloud
     } else if (res.status === 403) {
       logout(true);
     }
@@ -2128,9 +2129,9 @@ async function handleAuthSubmit(e) {
       closeAuthModal(null, true);
       showToast(authActiveTab === 'login' ? 'Logged in successfully!' : 'Account created successfully!');
       
-      // Perform guest migration and fetch cloud progress
-      await syncCloudProgress();
+      // Perform guest migration and fetch cloud progress: fetch first to merge with local state, then sync the merged result back.
       await fetchCloudProgress();
+      await syncCloudProgress();
       renderUserWidget();
     } else {
       errorEl.textContent = data.error || 'Authentication failed.';
